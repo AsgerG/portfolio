@@ -40,7 +40,7 @@ function clamp01(t: number) {
 type Point = { x: number; y: number };
 
 // black, white, blue
-const circleColors = ['#121212', '#ffffff', '#0284C7'];
+const circleColors = ['#121212', '#FFFFFF', '#0284C7'];
 
 // row layout while the circles are appearing, left to right:
 // blue, black, white, then the logo — all with the same edge-to-edge gap.
@@ -109,13 +109,62 @@ const blueRow = ['#0C4A6E', '#0284C7', '#0EA5E9', '#38BDF8'];
 const TEAL_Y = BLUE_Y + GROUP_GAP;
 const PURPLE_Y = TEAL_Y + ROW_GAP;
 const tealRow = ['#0F766E', '#0D9488', '#14B8A6'];
-const purpleColor = '#463ACB';
+const purpleColor = '#4338CA';
 
 // signal group: two single-colour rows, underneath the analogous group
 const GREEN_Y = PURPLE_Y + GROUP_GAP;
 const RED_Y = GREEN_Y + ROW_GAP;
 const greenColor = '#21C45D';
 const redColor = '#F83959';
+
+// five new rows, formed by moving existing coloured circles (still
+// circles, no shape change), each equally spaced from the next.
+const ROW1_Y = ROW_Y;
+const ROW2_Y = ROW1_Y + GROUP_GAP;
+const ROW3_Y = ROW2_Y + GROUP_GAP;
+const ROW4_Y = ROW3_Y + GROUP_GAP;
+const ROW5_Y = ROW4_Y + GROUP_GAP;
+
+// row 1: black, #1A1E23, #333A42
+// row 2: #9CA6B2, #D4D8DE, #FFFFFF (white)
+// row 3: #0284C7 (blue), #0F766E (teal), #545F6D, #333A42 (duplicate)
+// row 4: #0C4A6E
+// row 5: purple (same circle as the analogous purple), #21C45D (green), #F83959 (red)
+const rowTargetY: Record<string, number> = {
+  '#121212': ROW1_Y,
+  '#1A1E23': ROW1_Y,
+  '#333A42': ROW1_Y,
+  '#9CA6B2': ROW2_Y,
+  '#D4D8DE': ROW2_Y,
+  '#FFFFFF': ROW2_Y,
+  '#0284C7': ROW3_Y,
+  '#0F766E': ROW3_Y,
+  '#545F6D': ROW3_Y,
+  '#0C4A6E': ROW4_Y,
+  [purpleColor]: ROW5_Y,
+  '#21C45D': ROW5_Y,
+  '#F83959': ROW5_Y,
+};
+const rowTargetX: Record<string, number> = {
+  '#121212': rowX(0),
+  '#1A1E23': rowX(1),
+  '#333A42': rowX(2),
+  '#FFFFFF': rowX(0),
+  '#D4D8DE': rowX(1),
+  '#9CA6B2': rowX(2),
+  '#0284C7': rowX(0),
+  '#0F766E': rowX(1),
+  '#545F6D': rowX(2),
+  '#0C4A6E': rowX(0),
+  [purpleColor]: rowX(0),
+  '#21C45D': rowX(1),
+  '#F83959': rowX(2),
+};
+
+// #545F6D is already part of the greyscale row and travels there like the
+// others; #333A42 needs an extra instant duplicate for row 3 (the original
+// stays in row 1), since it has no second circle to travel from
+const NEW_ROW3_X2 = rowX(3); // #333A42 duplicate
 
 // a header labels each row as it spawns in, all sharing the same left edge
 // so they line up with one another regardless of how wide each row is
@@ -126,6 +175,14 @@ const BRAND_LABEL_Y = BLUE_Y - LABEL_OFFSET;
 const ANALOGOUS_LABEL_Y = TEAL_Y - LABEL_OFFSET;
 const SIGNAL_LABEL_Y = GREEN_Y - LABEL_OFFSET;
 
+// each of the five new rows gets its own header, same left edge as above
+const ROW1_LABEL_Y = ROW1_Y - LABEL_OFFSET;
+const ROW2_LABEL_Y = ROW2_Y - LABEL_OFFSET;
+const ROW3_LABEL_Y = ROW3_Y - LABEL_OFFSET;
+const ROW4_LABEL_Y = ROW4_Y - LABEL_OFFSET;
+const ROW5_LABEL_Y = ROW5_Y - LABEL_OFFSET;
+const rowLabels = ['background', 'text', 'button', 'chip', 'tag'];
+
 const paragraphs = [
   'Placeholder text goes here. Replace this with the first thing you want people to read as they scroll.',
   'A second block of placeholder copy. This is where the story continues while the visual stays put.',
@@ -133,27 +190,34 @@ const paragraphs = [
   'Blue takes a step right, and a few shades of blue spawn in around it.',
   'The teal row and the purple circle unfold together underneath it.',
   'Finally, the signal group spawns in with green and red.',
+  'Then black, #1A1E23, and #333A42 regroup into the first row of five.',
+  'Row two gathers #9CA6B2, #D4D8DE, and white.',
+  'Row three gathers blue, teal, #545F6D, and a duplicate of #333A42.',
+  'Row four is just #0C4A6E on its own.',
+  'Row five closes it out with #4338CA, green, and red.',
 ];
 
 function App() {
   const { ref, progress } = useScrollProgress<HTMLDivElement>();
 
-  // 0    -> 0.14: circles appear next to the logo
-  // 0.14 -> 0.22: logo fades out, circles slide into their grid layout
-  // 0.22 -> 0.42: white slides right, the greyscale spawns in along the way
-  // 0.42 -> 0.58: blue steps right, three shades of blue spawn in around it
-  // 0.58 -> 0.78: the teal row + purple circle spawn underneath the blue row
-  // 0.78 -> 1:    the signal group (green + red) spawns underneath that
-  const appearEnd = 0.14;
-  const moveT = clamp01((progress - appearEnd) / 0.08);
-  const spawnT = clamp01((progress - 0.22) / 0.2);
+  // 0    -> 0.07: circles appear next to the logo
+  // 0.07 -> 0.11: logo fades out, circles slide into their grid layout
+  // 0.11 -> 0.21: white slides right, the greyscale spawns in along the way
+  // 0.21 -> 0.29: blue steps right, three shades of blue spawn in around it
+  // 0.29 -> 0.39: the teal row + purple circle spawn underneath the blue row
+  // 0.39 -> 0.5:  the signal group (green + red) spawns underneath that
+  // 0.5  -> 1:    all five rows form together, as everything unclaimed
+  //               fades away
+  const appearEnd = 0.07;
+  const moveT = clamp01((progress - appearEnd) / 0.04);
+  const spawnT = clamp01((progress - 0.11) / 0.1);
   const svgOpacity = 1 - moveT;
 
   // "Neutrals" fades in once the new shades of grey start appearing,
   // not while black and white are just settling into the grid
   const neutralsLabelLocal = spawnT;
 
-  const stageD = clamp01((progress - 0.42) / 0.16);
+  const stageD = clamp01((progress - 0.21) / 0.08);
   const blueMoveT = clamp01(stageD / 0.35);
   const blueLeftLocal = clamp01((stageD - 0.15) / 0.35);
   const blueRight1Local = clamp01((stageD - 0.45) / 0.35);
@@ -164,7 +228,7 @@ function App() {
 
   // the teal row and the purple circle unfold together: the row cascades
   // left to right, while purple starts at the same moment as the first dot
-  const stageRows = clamp01((progress - 0.58) / 0.2);
+  const stageRows = clamp01((progress - 0.29) / 0.1);
   const teal0Local = clamp01(stageRows / 0.5);
   const teal1Local = clamp01((stageRows - 0.15) / 0.5);
   const teal2Local = clamp01((stageRows - 0.3) / 0.5);
@@ -174,18 +238,45 @@ function App() {
   const analogousLabelLocal = clamp01(stageRows / 0.5);
 
   // green and red spawn in together
-  const stageSignal = clamp01((progress - 0.78) / 0.22);
+  const stageSignal = clamp01((progress - 0.39) / 0.11);
   const greenLocal = clamp01(stageSignal / 0.6);
   const redLocal = clamp01(stageSignal / 0.6);
 
   // "Signal" fades in as green and red spawn
   const signalLabelLocal = clamp01(stageSignal / 0.6);
 
+  // all five rows form together, over the whole remaining scroll range
+  const stageRowAll = clamp01((progress - 0.5) / 0.5);
+  const stageRow1 = stageRowAll;
+  const stageRow2 = stageRowAll;
+  const stageRow3 = stageRowAll;
+  const stageRow4 = stageRowAll;
+  const stageRow5 = stageRowAll;
+
+  // everything not claimed by a row fades away early in that sequence
+  const fade = 1 - clamp01((progress - 0.5) / 0.15);
+
+  const rowStageByColor: Record<string, number> = {
+    '#121212': stageRow1,
+    '#1A1E23': stageRow1,
+    '#333A42': stageRow1,
+    '#9CA6B2': stageRow2,
+    '#D4D8DE': stageRow2,
+    '#FFFFFF': stageRow2,
+    '#0284C7': stageRow3,
+    '#0F766E': stageRow3,
+    '#545F6D': stageRow3,
+    '#0C4A6E': stageRow4,
+    [purpleColor]: stageRow5,
+    '#21C45D': stageRow5,
+    '#F83959': stageRow5,
+  };
+
   return (
     <div className="bg-[#15181D]">
       <div ref={ref} className="grid grid-cols-2">
         <div className="sticky top-0 h-screen flex items-center justify-center">
-          <div className="relative w-[460px] max-w-full h-[480px]">
+          <div className="relative w-[460px] max-w-full h-[560px]">
             <svg
               width="200"
               height="200"
@@ -235,7 +326,7 @@ function App() {
               const end = endPositions[i];
               const { opacity, scale } = circleAppear(progress, appearEnd);
               let x = lerp(start.x, end.x, moveT);
-              const y = lerp(start.y, end.y, moveT);
+              let y = lerp(start.y, end.y, moveT);
 
               // the white circle keeps sliding right once the grid settles
               if (i === 1) {
@@ -247,6 +338,12 @@ function App() {
                 x += (BLUE_MOVED_X - BLUE_START_X) * blueMoveT;
               }
 
+              const rowStage = rowStageByColor[color];
+              if (rowStage !== undefined) {
+                x = lerp(x, rowTargetX[color], rowStage);
+                y = lerp(y, rowTargetY[color], rowStage);
+              }
+
               return (
                 <span
                   key={color}
@@ -255,7 +352,7 @@ function App() {
                     backgroundColor: color,
                     left: x,
                     top: y,
-                    opacity,
+                    opacity: rowStage !== undefined ? opacity : opacity * fade,
                     transform: `translate(-50%, -50%) scale(${scale})`,
                   }}
                 />
@@ -264,11 +361,18 @@ function App() {
 
             {grayscaleRow.slice(1, -1).map((color, gIndex) => {
               const i = gIndex + 1;
-              const x = rowX(i);
+              let x = rowX(i);
+              let y = ROW_Y;
               const spawnThreshold = clamp01(
                 (x - WHITE_START_X) / (WHITE_END_X - WHITE_START_X),
               );
               const local = clamp01((spawnT - spawnThreshold) / 0.05);
+
+              const rowStage = rowStageByColor[color];
+              if (rowStage !== undefined) {
+                x = lerp(x, rowTargetX[color], rowStage);
+                y = lerp(y, rowTargetY[color], rowStage);
+              }
 
               return (
                 <span
@@ -277,8 +381,8 @@ function App() {
                   style={{
                     backgroundColor: color,
                     left: x,
-                    top: ROW_Y,
-                    opacity: local,
+                    top: y,
+                    opacity: rowStage !== undefined ? local : local * fade,
                     transform: `translate(-50%, -50%) scale(${0.2 + local * 0.8})`,
                   }}
                 />
@@ -289,8 +393,8 @@ function App() {
               className="absolute w-6 h-6 rounded-full ring-1 ring-white/10"
               style={{
                 backgroundColor: blueRow[0],
-                left: BLUE_START_X,
-                top: BLUE_Y,
+                left: lerp(BLUE_START_X, rowTargetX[blueRow[0]], stageRow4),
+                top: lerp(BLUE_Y, rowTargetY[blueRow[0]], stageRow4),
                 opacity: blueLeftLocal,
                 transform: `translate(-50%, -50%) scale(${0.2 + blueLeftLocal * 0.8})`,
               }}
@@ -301,7 +405,7 @@ function App() {
                 backgroundColor: blueRow[2],
                 left: rowX(2),
                 top: BLUE_Y,
-                opacity: blueRight1Local,
+                opacity: blueRight1Local * fade,
                 transform: `translate(-50%, -50%) scale(${0.2 + blueRight1Local * 0.8})`,
               }}
             />
@@ -311,22 +415,31 @@ function App() {
                 backgroundColor: blueRow[3],
                 left: rowX(3),
                 top: BLUE_Y,
-                opacity: blueRight2Local,
+                opacity: blueRight2Local * fade,
                 transform: `translate(-50%, -50%) scale(${0.2 + blueRight2Local * 0.8})`,
               }}
             />
 
             {tealRow.map((color, i) => {
               const local = [teal0Local, teal1Local, teal2Local][i];
+              const rowStage = rowStageByColor[color];
+              const x =
+                rowStage !== undefined
+                  ? lerp(rowX(i), rowTargetX[color], rowStage)
+                  : rowX(i);
+              const y =
+                rowStage !== undefined
+                  ? lerp(TEAL_Y, rowTargetY[color], rowStage)
+                  : TEAL_Y;
               return (
                 <span
                   key={color}
                   className="absolute w-6 h-6 rounded-full ring-1 ring-white/10"
                   style={{
                     backgroundColor: color,
-                    left: rowX(i),
-                    top: TEAL_Y,
-                    opacity: local,
+                    left: x,
+                    top: y,
+                    opacity: rowStage !== undefined ? local : local * fade,
                     transform: `translate(-50%, -50%) scale(${0.2 + local * 0.8})`,
                   }}
                 />
@@ -337,8 +450,8 @@ function App() {
               className="absolute w-6 h-6 rounded-full ring-1 ring-white/10"
               style={{
                 backgroundColor: purpleColor,
-                left: rowX(0),
-                top: PURPLE_Y,
+                left: lerp(rowX(0), rowTargetX[purpleColor], stageRow5),
+                top: lerp(PURPLE_Y, rowTargetY[purpleColor], stageRow5),
                 opacity: purpleLocal,
                 transform: `translate(-50%, -50%) scale(${0.2 + purpleLocal * 0.8})`,
               }}
@@ -349,7 +462,7 @@ function App() {
               style={{
                 left: LABEL_X,
                 top: NEUTRALS_LABEL_Y,
-                opacity: neutralsLabelLocal,
+                opacity: neutralsLabelLocal * fade,
                 transform: 'translateY(-50%)',
               }}
             >
@@ -361,7 +474,7 @@ function App() {
               style={{
                 left: LABEL_X,
                 top: BRAND_LABEL_Y,
-                opacity: brandLabelLocal,
+                opacity: brandLabelLocal * fade,
                 transform: 'translateY(-50%)',
               }}
             >
@@ -373,7 +486,7 @@ function App() {
               style={{
                 left: LABEL_X,
                 top: ANALOGOUS_LABEL_Y,
-                opacity: analogousLabelLocal,
+                opacity: analogousLabelLocal * fade,
                 transform: 'translateY(-50%)',
               }}
             >
@@ -384,8 +497,8 @@ function App() {
               className="absolute w-6 h-6 rounded-full ring-1 ring-white/10"
               style={{
                 backgroundColor: greenColor,
-                left: rowX(0),
-                top: GREEN_Y,
+                left: lerp(rowX(0), rowTargetX[greenColor], stageRow5),
+                top: lerp(GREEN_Y, rowTargetY[greenColor], stageRow5),
                 opacity: greenLocal,
                 transform: `translate(-50%, -50%) scale(${0.2 + greenLocal * 0.8})`,
               }}
@@ -394,24 +507,82 @@ function App() {
               className="absolute w-6 h-6 rounded-full ring-1 ring-white/10"
               style={{
                 backgroundColor: redColor,
-                left: rowX(0),
-                top: RED_Y,
+                left: lerp(rowX(0), rowTargetX[redColor], stageRow5),
+                top: lerp(RED_Y, rowTargetY[redColor], stageRow5),
                 opacity: redLocal,
                 transform: `translate(-50%, -50%) scale(${0.2 + redLocal * 0.8})`,
               }}
             />
+
+            {/* row 3: a second #333A42 sits exactly on top of the original
+                (same spawn position, same appear timing) so the two are
+                indistinguishable until the rows start forming — then this
+                copy peels off toward row 3 while the original heads to
+                row 1 */}
+            {(() => {
+              const dupSpawnX = rowX(3);
+              const spawnThreshold = clamp01(
+                (dupSpawnX - WHITE_START_X) / (WHITE_END_X - WHITE_START_X),
+              );
+              const local = clamp01((spawnT - spawnThreshold) / 0.05);
+              const x = lerp(dupSpawnX, NEW_ROW3_X2, stageRow3);
+              const y = lerp(ROW_Y, ROW3_Y, stageRow3);
+              return (
+                <span
+                  className="absolute w-6 h-6 rounded-full ring-1 ring-white/10"
+                  style={{
+                    backgroundColor: '#333A42',
+                    left: x,
+                    top: y,
+                    opacity: local,
+                    transform: `translate(-50%, -50%) scale(${0.2 + local * 0.8})`,
+                  }}
+                />
+              );
+            })()}
 
             <span
               className="absolute text-white/70 text-sm tracking-wide whitespace-nowrap"
               style={{
                 left: LABEL_X,
                 top: SIGNAL_LABEL_Y,
-                opacity: signalLabelLocal,
+                opacity: signalLabelLocal * fade,
                 transform: 'translateY(-50%)',
               }}
             >
               Signal
             </span>
+
+            {rowLabels.map((text, i) => {
+              const rowLabelY = [
+                ROW1_LABEL_Y,
+                ROW2_LABEL_Y,
+                ROW3_LABEL_Y,
+                ROW4_LABEL_Y,
+                ROW5_LABEL_Y,
+              ][i];
+              const rowStage = [
+                stageRow1,
+                stageRow2,
+                stageRow3,
+                stageRow4,
+                stageRow5,
+              ][i];
+              return (
+                <span
+                  key={text}
+                  className="absolute text-white/70 text-sm tracking-wide whitespace-nowrap"
+                  style={{
+                    left: LABEL_X,
+                    top: rowLabelY,
+                    opacity: rowStage,
+                    transform: 'translateY(-50%)',
+                  }}
+                >
+                  {text}
+                </span>
+              );
+            })}
           </div>
         </div>
 
