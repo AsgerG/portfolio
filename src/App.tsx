@@ -55,13 +55,19 @@ const ROW_START_X = 90;
 const ROW_SPACING = 26;
 const rowX = (i: number) => ROW_START_X + i * ROW_SPACING;
 
+// vertical gap between each group of rows (neutrals / brand / analogous),
+// and the tighter gap between rows within the same group
+const GROUP_GAP = 90;
+const ROW_GAP = 32;
+const BLUE_Y = ROW_Y + GROUP_GAP;
+
 // black + white right next to each other on top, blue underneath aligned
 // with black, on the left. White sits at the row's first slot so it can
 // slide straight into the greyscale row from here.
 const endPositions: Point[] = [
   { x: rowX(0), y: ROW_Y },
   { x: rowX(1), y: ROW_Y },
-  { x: rowX(0), y: 150 },
+  { x: rowX(0), y: BLUE_Y },
 ];
 
 // black, white, and blue all appear together
@@ -79,23 +85,13 @@ const grayscaleRow = [
   '#121212',
   '#14191F',
   '#1A1E23',
-  '#20262D',
-  '#282D34',
   '#333A42',
   '#3E4651',
-  '#49535F',
   '#545F6D',
-  '#5F6C7C',
   '#6A798A',
-  '#788697',
   '#8693A2',
   '#9CA6B2',
-  '#A9B1BC',
-  '#B7BEC8',
   '#D4D8DE',
-  '#D4D8DE',
-  '#E2E5E9',
-  '#F1F2F4',
   '#FFFFFF',
 ];
 
@@ -108,37 +104,88 @@ const BLUE_START_X = endPositions[2].x; // rowX(0)
 const BLUE_MOVED_X = rowX(1);
 const blueRow = ['#0C4A6E', '#0284C7', '#0EA5E9', '#38BDF8'];
 
+// teal row and the purple circle spawn together, underneath the blue row.
+// they stay close to one another (same group), further below the blue row
+const TEAL_Y = BLUE_Y + GROUP_GAP;
+const PURPLE_Y = TEAL_Y + ROW_GAP;
+const tealRow = ['#0F766E', '#0D9488', '#14B8A6'];
+const purpleColor = '#463ACB';
+
+// signal group: two single-colour rows, underneath the analogous group
+const GREEN_Y = PURPLE_Y + GROUP_GAP;
+const RED_Y = GREEN_Y + ROW_GAP;
+const greenColor = '#21C45D';
+const redColor = '#F83959';
+
+// a header labels each row as it spawns in, all sharing the same left edge
+// so they line up with one another regardless of how wide each row is
+const LABEL_OFFSET = 26;
+const LABEL_X = rowX(0) - 12;
+const NEUTRALS_LABEL_Y = ROW_Y - LABEL_OFFSET;
+const BRAND_LABEL_Y = BLUE_Y - LABEL_OFFSET;
+const ANALOGOUS_LABEL_Y = TEAL_Y - LABEL_OFFSET;
+const SIGNAL_LABEL_Y = GREEN_Y - LABEL_OFFSET;
+
 const paragraphs = [
   'Placeholder text goes here. Replace this with the first thing you want people to read as they scroll.',
   'A second block of placeholder copy. This is where the story continues while the visual stays put.',
   'Then the white circle slides right, and the full greyscale spawns in behind it.',
   'Blue takes a step right, and a few shades of blue spawn in around it.',
-  'One more placeholder paragraph to round things out before the section ends.',
+  'The teal row and the purple circle unfold together underneath it.',
+  'Finally, the signal group spawns in with green and red.',
 ];
 
 function App() {
   const { ref, progress } = useScrollProgress<HTMLDivElement>();
 
-  // 0    -> 0.25: circles appear next to the logo
-  // 0.25 -> 0.4:  logo fades out, circles slide into their grid layout
-  // 0.4  -> 0.7:  white slides right, the greyscale spawns in along the way
-  // 0.7  -> 1:    blue steps right, three shades of blue spawn in around it
-  const appearEnd = 0.25;
-  const moveT = clamp01((progress - appearEnd) / 0.15);
-  const spawnT = clamp01((progress - 0.4) / 0.3);
+  // 0    -> 0.14: circles appear next to the logo
+  // 0.14 -> 0.22: logo fades out, circles slide into their grid layout
+  // 0.22 -> 0.42: white slides right, the greyscale spawns in along the way
+  // 0.42 -> 0.58: blue steps right, three shades of blue spawn in around it
+  // 0.58 -> 0.78: the teal row + purple circle spawn underneath the blue row
+  // 0.78 -> 1:    the signal group (green + red) spawns underneath that
+  const appearEnd = 0.14;
+  const moveT = clamp01((progress - appearEnd) / 0.08);
+  const spawnT = clamp01((progress - 0.22) / 0.2);
   const svgOpacity = 1 - moveT;
 
-  const stageD = clamp01((progress - 0.7) / 0.3);
+  // "Neutrals" fades in once the new shades of grey start appearing,
+  // not while black and white are just settling into the grid
+  const neutralsLabelLocal = spawnT;
+
+  const stageD = clamp01((progress - 0.42) / 0.16);
   const blueMoveT = clamp01(stageD / 0.35);
   const blueLeftLocal = clamp01((stageD - 0.15) / 0.35);
   const blueRight1Local = clamp01((stageD - 0.45) / 0.35);
   const blueRight2Local = clamp01((stageD - 0.65) / 0.35);
 
+  // "Brand" fades in as the blue row spawns
+  const brandLabelLocal = clamp01(stageD / 0.6);
+
+  // the teal row and the purple circle unfold together: the row cascades
+  // left to right, while purple starts at the same moment as the first dot
+  const stageRows = clamp01((progress - 0.58) / 0.2);
+  const teal0Local = clamp01(stageRows / 0.5);
+  const teal1Local = clamp01((stageRows - 0.15) / 0.5);
+  const teal2Local = clamp01((stageRows - 0.3) / 0.5);
+  const purpleLocal = clamp01(stageRows / 0.5);
+
+  // "Analogous" fades in as the teal row and purple circle spawn
+  const analogousLabelLocal = clamp01(stageRows / 0.5);
+
+  // green and red spawn in together
+  const stageSignal = clamp01((progress - 0.78) / 0.22);
+  const greenLocal = clamp01(stageSignal / 0.6);
+  const redLocal = clamp01(stageSignal / 0.6);
+
+  // "Signal" fades in as green and red spawn
+  const signalLabelLocal = clamp01(stageSignal / 0.6);
+
   return (
     <div className="bg-[#15181D]">
       <div ref={ref} className="grid grid-cols-2">
         <div className="sticky top-0 h-screen flex items-center justify-center">
-          <div className="relative w-[760px] max-w-full h-60">
+          <div className="relative w-[460px] max-w-full h-[480px]">
             <svg
               width="200"
               height="200"
@@ -243,7 +290,7 @@ function App() {
               style={{
                 backgroundColor: blueRow[0],
                 left: BLUE_START_X,
-                top: 150,
+                top: BLUE_Y,
                 opacity: blueLeftLocal,
                 transform: `translate(-50%, -50%) scale(${0.2 + blueLeftLocal * 0.8})`,
               }}
@@ -253,7 +300,7 @@ function App() {
               style={{
                 backgroundColor: blueRow[2],
                 left: rowX(2),
-                top: 150,
+                top: BLUE_Y,
                 opacity: blueRight1Local,
                 transform: `translate(-50%, -50%) scale(${0.2 + blueRight1Local * 0.8})`,
               }}
@@ -263,11 +310,108 @@ function App() {
               style={{
                 backgroundColor: blueRow[3],
                 left: rowX(3),
-                top: 150,
+                top: BLUE_Y,
                 opacity: blueRight2Local,
                 transform: `translate(-50%, -50%) scale(${0.2 + blueRight2Local * 0.8})`,
               }}
             />
+
+            {tealRow.map((color, i) => {
+              const local = [teal0Local, teal1Local, teal2Local][i];
+              return (
+                <span
+                  key={color}
+                  className="absolute w-6 h-6 rounded-full ring-1 ring-white/10"
+                  style={{
+                    backgroundColor: color,
+                    left: rowX(i),
+                    top: TEAL_Y,
+                    opacity: local,
+                    transform: `translate(-50%, -50%) scale(${0.2 + local * 0.8})`,
+                  }}
+                />
+              );
+            })}
+
+            <span
+              className="absolute w-6 h-6 rounded-full ring-1 ring-white/10"
+              style={{
+                backgroundColor: purpleColor,
+                left: rowX(0),
+                top: PURPLE_Y,
+                opacity: purpleLocal,
+                transform: `translate(-50%, -50%) scale(${0.2 + purpleLocal * 0.8})`,
+              }}
+            />
+
+            <span
+              className="absolute text-white/70 text-sm tracking-wide whitespace-nowrap"
+              style={{
+                left: LABEL_X,
+                top: NEUTRALS_LABEL_Y,
+                opacity: neutralsLabelLocal,
+                transform: 'translateY(-50%)',
+              }}
+            >
+              Neutrals
+            </span>
+
+            <span
+              className="absolute text-white/70 text-sm tracking-wide whitespace-nowrap"
+              style={{
+                left: LABEL_X,
+                top: BRAND_LABEL_Y,
+                opacity: brandLabelLocal,
+                transform: 'translateY(-50%)',
+              }}
+            >
+              Brand
+            </span>
+
+            <span
+              className="absolute text-white/70 text-sm tracking-wide whitespace-nowrap"
+              style={{
+                left: LABEL_X,
+                top: ANALOGOUS_LABEL_Y,
+                opacity: analogousLabelLocal,
+                transform: 'translateY(-50%)',
+              }}
+            >
+              Analogous
+            </span>
+
+            <span
+              className="absolute w-6 h-6 rounded-full ring-1 ring-white/10"
+              style={{
+                backgroundColor: greenColor,
+                left: rowX(0),
+                top: GREEN_Y,
+                opacity: greenLocal,
+                transform: `translate(-50%, -50%) scale(${0.2 + greenLocal * 0.8})`,
+              }}
+            />
+            <span
+              className="absolute w-6 h-6 rounded-full ring-1 ring-white/10"
+              style={{
+                backgroundColor: redColor,
+                left: rowX(0),
+                top: RED_Y,
+                opacity: redLocal,
+                transform: `translate(-50%, -50%) scale(${0.2 + redLocal * 0.8})`,
+              }}
+            />
+
+            <span
+              className="absolute text-white/70 text-sm tracking-wide whitespace-nowrap"
+              style={{
+                left: LABEL_X,
+                top: SIGNAL_LABEL_Y,
+                opacity: signalLabelLocal,
+                transform: 'translateY(-50%)',
+              }}
+            >
+              Signal
+            </span>
           </div>
         </div>
 
