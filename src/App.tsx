@@ -37,6 +37,58 @@ function clamp01(t: number) {
   return Math.min(Math.max(t, 0), 1);
 }
 
+function hexToRgba(hex: string, alpha: number) {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+// a flat per-character width overestimates words with a lot of narrow
+// letters (like "Tertiary", heavy on t/i/r), so this uses a rough per-letter
+// width table for Inter medium instead — used to size any box to its text
+const CHAR_WIDTH_EM: Record<string, number> = {
+  i: 0.28,
+  l: 0.28,
+  j: 0.28,
+  f: 0.32,
+  t: 0.32,
+  r: 0.35,
+  a: 0.5,
+  b: 0.55,
+  c: 0.45,
+  d: 0.55,
+  e: 0.5,
+  g: 0.55,
+  h: 0.55,
+  k: 0.5,
+  n: 0.55,
+  o: 0.56,
+  p: 0.55,
+  q: 0.55,
+  s: 0.45,
+  u: 0.55,
+  v: 0.5,
+  x: 0.5,
+  y: 0.5,
+  z: 0.45,
+  m: 0.85,
+  w: 0.78,
+  D: 0.6,
+  P: 0.6,
+  S: 0.58,
+  T: 0.55,
+};
+const DEFAULT_CHAR_WIDTH_EM = 0.55;
+
+function estimateTextWidth(text: string, fontSize: number) {
+  let em = 0;
+  for (const ch of text) {
+    em += CHAR_WIDTH_EM[ch] ?? DEFAULT_CHAR_WIDTH_EM;
+  }
+  return em * fontSize;
+}
+
 type Point = { x: number; y: number };
 
 // black, white, blue
@@ -94,6 +146,10 @@ const grayscaleRow = [
   '#D4D8DE',
   '#FFFFFF',
 ];
+
+// the first 4 (darkest) circles in the greyscale row keep a subtle stroke,
+// since they'd otherwise blend into the dark canvas background
+const GREYSCALE_STROKE_COLORS = grayscaleRow.slice(0, 4);
 
 const WHITE_START_X = endPositions[1].x; // rowX(1), right next to black
 const WHITE_END_X = rowX(grayscaleRow.length - 1); // final resting spot, far right
@@ -166,10 +222,314 @@ const rowTargetX: Record<string, number> = {
 // stays in row 1), since it has no second circle to travel from
 const NEW_ROW3_X2 = rowX(3); // #333A42 duplicate
 
+// once each row has formed, every circle in it morphs into a rectangular
+// element sized for that row. boxes are left-aligned starting at the same
+// edge the original 24px circles rendered at (their centre minus their own
+// radius), so the row headers — and the circles earlier in the animation —
+// don't need to move to match; only the boxes shift to meet them.
+const BOX_START_X = ROW_START_X - 12;
+const MORPH_GAP = 8;
+const SHAPE_RADIUS = 8;
+const BUTTON_RADIUS = 4; // row 3's buttons get a tighter corner radius
+const ROW1_RADIUS = 16; // row 1's elements get a rounder corner radius
+const rowShapeByY: Record<number, { width: number; height: number }> = {
+  [ROW1_Y]: { width: 120, height: 40 }, // background
+  [ROW2_Y]: { width: 85, height: 24 }, // text
+  [ROW3_Y]: { width: 101, height: 28 }, // button
+  [ROW4_Y]: { width: 101, height: 28 }, // chip
+  [ROW5_Y]: { width: 40, height: 20 }, // tag
+};
+
+// recover a row's 0-based slot index from the pixel x-position it was
+// assigned in rowTargetX (they're all just ROW_START_X + i * ROW_SPACING)
+function slotIndexFromX(x: number) {
+  return Math.round((x - ROW_START_X) / ROW_SPACING);
+}
+
+// interpolate a circle at `centerX` into its row's rectangular shape,
+// left-aligned within the row using its slot index
+function morphShape(
+  centerX: number,
+  targetY: number,
+  slotIndex: number,
+  morphT: number,
+  endRadius: number = SHAPE_RADIUS,
+  shapeOverride?: { width: number; height: number },
+) {
+  const shape = shapeOverride ?? rowShapeByY[targetY];
+  const rectLeft = BOX_START_X + slotIndex * (shape.width + MORPH_GAP);
+  const rectCenterX = rectLeft + shape.width / 2;
+  return {
+    x: lerp(centerX, rectCenterX, morphT),
+    width: lerp(24, shape.width, morphT),
+    height: lerp(24, shape.height, morphT),
+    radius: lerp(12, endRadius, morphT),
+  };
+}
+
+// row 3 becomes actual buttons: white "Button" label plus a matching-colour
+// chevron, faded in only once the shape has mostly finished morphing
+const ROW3_BUTTON_COLORS = ['#0284C7', '#0F766E', '#545F6D'];
+
+function ButtonLabel({
+  opacity,
+  text = 'Button',
+  color = '#FFFFFF',
+}: {
+  opacity: number;
+  text?: string;
+  color?: string;
+}) {
+  return (
+    <span
+      className="flex items-center justify-center gap-2 font-medium whitespace-nowrap"
+      style={{ opacity, color, fontFamily: 'Inter, sans-serif', fontSize: 14 }}
+    >
+      {text}
+      <svg
+        width="8"
+        height="8"
+        viewBox="0 0 8 8"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M5.46967 4.53033C5.76256 4.23744 5.76256 3.76256 5.46967 3.46967L3.28033 1.28033C2.80785 0.807855 2 1.14248 2 1.81066V6.18934C2 6.85752 2.80786 7.19214 3.28033 6.71967L5.46967 4.53033Z"
+          fill={color}
+        />
+      </svg>
+    </span>
+  );
+}
+
+// each row-3 button is sized to fit its own label (text + gap + chevron)
+// instead of sharing one fixed width, in slot order: Primary, Secondary,
+// Tertiary, Disabled
+const ROW3_TEXTS = ['Primary', 'Secondary', 'Tertiary', 'Disabled'];
+const ROW3_FONT_SIZE = 14;
+const ROW3_ICON_GAP = 8; // matches the flex gap-2 used in ButtonLabel
+const ROW3_ICON_WIDTH = 8;
+const ROW3_BUTTON_MARGIN_X = 12;
+const ROW3_WIDTHS = ROW3_TEXTS.map((text) =>
+  Math.round(
+    estimateTextWidth(text, ROW3_FONT_SIZE) +
+      ROW3_ICON_GAP +
+      ROW3_ICON_WIDTH +
+      ROW3_BUTTON_MARGIN_X * 2,
+  ),
+);
+function row3Left(slotIndex: number) {
+  let left = BOX_START_X;
+  for (let i = 0; i < slotIndex; i++) {
+    left += ROW3_WIDTHS[i] + MORPH_GAP;
+  }
+  return left;
+}
+function morphRow3(
+  centerX: number,
+  slotIndex: number,
+  morphT: number,
+  endRadius: number = BUTTON_RADIUS,
+) {
+  const targetWidth = ROW3_WIDTHS[slotIndex];
+  const targetHeight = rowShapeByY[ROW3_Y].height;
+  const rectLeft = row3Left(slotIndex);
+  const rectCenterX = rectLeft + targetWidth / 2;
+  return {
+    x: lerp(centerX, rectCenterX, morphT),
+    width: lerp(24, targetWidth, morphT),
+    height: lerp(24, targetHeight, morphT),
+    radius: lerp(12, endRadius, morphT),
+  };
+}
+
+// row 4 is styled like row 3's buttons, but with an added #0284C7 stroke:
+// white "Chip" label plus a matching-colour close icon
+const CHIP_STROKE_COLOR = '#0284C7';
+
+function ChipLabel({ opacity }: { opacity: number }) {
+  return (
+    <span
+      className="flex items-center justify-center gap-1 text-white font-medium whitespace-nowrap"
+      style={{ opacity, fontFamily: 'Inter, sans-serif', fontSize: 14 }}
+    >
+      <svg
+        width="20"
+        height="12"
+        viewBox="0 0 20 12"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <rect width="20" height="12" fill="white" />
+        <rect x="9" y="7" width="11" height="5" fill="#F83959" />
+        <rect y="7" width="7" height="5" fill="#F83959" />
+        <rect x="9" width="11" height="5" fill="#F83959" />
+        <rect width="7" height="5" fill="#F83959" />
+      </svg>
+      {ROW4_TEXT}
+      <svg
+        width="12"
+        height="12"
+        viewBox="0 0 12 12"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M2.75 9.25L9.25 2.75M2.75 2.75L9.25 9.25"
+          stroke="white"
+          strokeOpacity="0.6"
+          strokeWidth="1.6"
+          strokeLinecap="round"
+        />
+      </svg>
+    </span>
+  );
+}
+
+// row 4's box is sized to fit its content (flag icon, text, close icon)
+// with an 8px margin on each side, instead of sharing row 3's fixed width
+const ROW4_TEXT = 'Denmark';
+const ROW4_FONT_SIZE = 14;
+const ROW4_GAP = 4; // matches the flex gap-1 used in ChipLabel
+const ROW4_FLAG_WIDTH = 20;
+const ROW4_CLOSE_ICON_WIDTH = 12;
+const ROW4_MARGIN_X = 14;
+rowShapeByY[ROW4_Y] = {
+  width: Math.round(
+    ROW4_FLAG_WIDTH +
+      ROW4_GAP +
+      estimateTextWidth(ROW4_TEXT, ROW4_FONT_SIZE) +
+      ROW4_GAP +
+      ROW4_CLOSE_ICON_WIDTH +
+      ROW4_MARGIN_X * 2,
+  ),
+  height: rowShapeByY[ROW4_Y].height,
+};
+
+// row 5's tags each get their own content: purple gets a bold "NEW" label,
+// green gets a checkmark, red gets a dash — all white, faded in on the same
+// schedule as the other rows' labels
+function NewLabel({ opacity }: { opacity: number }) {
+  return (
+    <span
+      className="text-white font-bold whitespace-nowrap"
+      style={{ opacity, fontFamily: 'Inter, sans-serif', fontSize: 11 }}
+    >
+      NEW
+    </span>
+  );
+}
+
+function CheckIcon({ opacity }: { opacity: number }) {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 20 20"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      style={{ opacity }}
+    >
+      <path
+        d="M3.43744 10.5211L5.22721 8.73129L8.0113 11.5154L14.7727 4.75391L16.5624 6.54373L8.0113 15.0951L3.43744 10.5211Z"
+        fill="white"
+      />
+    </svg>
+  );
+}
+
+function DashIcon({ opacity }: { opacity: number }) {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 20 20"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      style={{ opacity }}
+    >
+      <rect x="2.50168" y="8.12524" width="15" height="3.75" fill="white" />
+    </svg>
+  );
+}
+
+// row 2 becomes text swatches: each box's background fades away, leaving
+// behind a label set in that same colour ("Primary"/"Secondary"/"Tertiary",
+// left to right) so the colour itself becomes the visible element
+const ROW2_TEXT_COLORS = ['#FFFFFF', '#D4D8DE', '#9CA6B2'];
+const ROW2_LABELS = ['Primary', 'Secondary', 'Tertiary'];
+const ROW2_FONT_SIZE = 18;
+
+function ColorLabel({ text, color }: { text: string; color: string }) {
+  return (
+    <span
+      className="flex items-center justify-center whitespace-nowrap font-medium"
+      style={{ color, fontFamily: 'Inter, sans-serif', fontSize: ROW2_FONT_SIZE }}
+    >
+      {text}
+    </span>
+  );
+}
+
+// each row-2 box is sized to fit its own label instead of a shared width,
+// using the shared per-letter width estimate (see estimateTextWidth above)
+const ROW2_PADDING_X = 12;
+const row2Widths = ROW2_LABELS.map((label) =>
+  Math.round(estimateTextWidth(label, ROW2_FONT_SIZE) + ROW2_PADDING_X),
+);
+function row2Left(slotIndex: number) {
+  let left = BOX_START_X;
+  for (let i = 0; i < slotIndex; i++) {
+    left += row2Widths[i] + MORPH_GAP;
+  }
+  return left;
+}
+function morphRow2(centerX: number, slotIndex: number, morphT: number) {
+  const targetWidth = row2Widths[slotIndex];
+  const rectLeft = row2Left(slotIndex);
+  const rectCenterX = rectLeft + targetWidth / 2;
+  const height = rowShapeByY[ROW2_Y].height;
+  return {
+    x: lerp(centerX, rectCenterX, morphT),
+    width: lerp(24, targetWidth, morphT),
+    height: lerp(24, height, morphT),
+    radius: lerp(12, SHAPE_RADIUS, morphT),
+  };
+}
+
+// row 5 no longer shares one uniform width: purple stays the tag size,
+// green and red shrink to 20x20 squares, so their spacing is computed from
+// each element's own width instead of the generic per-row shared width
+const ROW5_WIDTHS = [40, 20, 20]; // purple, green, red
+function row5Left(slotIndex: number) {
+  let left = BOX_START_X;
+  for (let i = 0; i < slotIndex; i++) {
+    left += ROW5_WIDTHS[i] + MORPH_GAP;
+  }
+  return left;
+}
+function morphRow5(
+  centerX: number,
+  slotIndex: number,
+  targetHeight: number,
+  endRadius: number,
+  morphT: number,
+) {
+  const targetWidth = ROW5_WIDTHS[slotIndex];
+  const rectLeft = row5Left(slotIndex);
+  const rectCenterX = rectLeft + targetWidth / 2;
+  return {
+    x: lerp(centerX, rectCenterX, morphT),
+    width: lerp(24, targetWidth, morphT),
+    height: lerp(24, targetHeight, morphT),
+    radius: lerp(12, endRadius, morphT),
+  };
+}
+
 // a header labels each row as it spawns in, all sharing the same left edge
 // so they line up with one another regardless of how wide each row is
 const LABEL_OFFSET = 26;
-const LABEL_X = rowX(0) - 12;
+const LABEL_X = BOX_START_X;
 const NEUTRALS_LABEL_Y = ROW_Y - LABEL_OFFSET;
 const BRAND_LABEL_Y = BLUE_Y - LABEL_OFFSET;
 const ANALOGOUS_LABEL_Y = TEAL_Y - LABEL_OFFSET;
@@ -206,8 +566,9 @@ function App() {
   // 0.21 -> 0.29: blue steps right, three shades of blue spawn in around it
   // 0.29 -> 0.39: the teal row + purple circle spawn underneath the blue row
   // 0.39 -> 0.5:  the signal group (green + red) spawns underneath that
-  // 0.5  -> 1:    all five rows form together, as everything unclaimed
+  // 0.5  -> 0.75: all five rows form together, as everything unclaimed
   //               fades away
+  // 0.75 -> 1:    every circle in a row morphs into that row's shape
   const appearEnd = 0.07;
   const moveT = clamp01((progress - appearEnd) / 0.04);
   const spawnT = clamp01((progress - 0.11) / 0.1);
@@ -245,13 +606,22 @@ function App() {
   // "Signal" fades in as green and red spawn
   const signalLabelLocal = clamp01(stageSignal / 0.6);
 
-  // all five rows form together, over the whole remaining scroll range
-  const stageRowAll = clamp01((progress - 0.5) / 0.5);
+  // all five rows form together, then every claimed circle morphs into
+  // its row's rectangular shape
+  const stageRowAll = clamp01((progress - 0.5) / 0.25);
   const stageRow1 = stageRowAll;
   const stageRow2 = stageRowAll;
   const stageRow3 = stageRowAll;
   const stageRow4 = stageRowAll;
   const stageRow5 = stageRowAll;
+  const morphT = clamp01((progress - 0.75) / 0.25);
+
+  // row 3's button label only shows up once the shape is mostly a rectangle
+  const buttonTextT = clamp01((morphT - 0.6) / 0.4);
+
+  // row 2's box backgrounds fade away on the same schedule, revealing the
+  // colour-matched label underneath
+  const row2BgAlpha = 1 - clamp01((morphT - 0.6) / 0.4);
 
   // everything not claimed by a row fades away early in that sequence
   const fade = 1 - clamp01((progress - 0.5) / 0.15);
@@ -339,23 +709,65 @@ function App() {
               }
 
               const rowStage = rowStageByColor[color];
+              const isRow3Button = ROW3_BUTTON_COLORS.includes(color);
+              const isRow2Text = ROW2_TEXT_COLORS.includes(color);
+              let width = 24;
+              let height = 24;
+              let radius = 9999;
               if (rowStage !== undefined) {
                 x = lerp(x, rowTargetX[color], rowStage);
                 y = lerp(y, rowTargetY[color], rowStage);
+                const morphed = isRow2Text
+                  ? morphRow2(x, slotIndexFromX(rowTargetX[color]), morphT)
+                  : isRow3Button
+                    ? morphRow3(x, slotIndexFromX(rowTargetX[color]), morphT)
+                    : morphShape(
+                        x,
+                        rowTargetY[color],
+                        slotIndexFromX(rowTargetX[color]),
+                        morphT,
+                        rowTargetY[color] === ROW1_Y ? ROW1_RADIUS : SHAPE_RADIUS,
+                      );
+                x = morphed.x;
+                width = morphed.width;
+                height = morphed.height;
+                radius = morphed.radius;
               }
 
               return (
                 <span
                   key={color}
-                  className="absolute w-6 h-6 rounded-full ring-1 ring-white/10"
+                  className={`absolute${isRow3Button || isRow2Text ? ' flex items-center justify-center overflow-hidden' : ''}`}
                   style={{
-                    backgroundColor: color,
+                    backgroundColor: isRow2Text
+                      ? hexToRgba(color, row2BgAlpha)
+                      : color,
                     left: x,
-                    top: y,
+                    top: y + (height - 24) / 2,
+                    width,
+                    height,
+                    borderRadius: radius,
                     opacity: rowStage !== undefined ? opacity : opacity * fade,
                     transform: `translate(-50%, -50%) scale(${scale})`,
+                    boxShadow: isRow3Button
+                      ? `0px 2px 1px rgba(0, 0, 0, ${0.25 * morphT})`
+                      : isRow2Text
+                        ? `inset 0 0 0 1px rgba(255, 255, 255, ${0.1 * row2BgAlpha})`
+                        : GREYSCALE_STROKE_COLORS.includes(color)
+                          ? `0 0 0 1px rgba(255, 255, 255, ${0.1 * (1 - morphT)}), inset 0 1px 1px rgba(255, 255, 255, ${0.08 * morphT})`
+                          : undefined,
                   }}
-                />
+                >
+                  {isRow3Button && (
+                    <ButtonLabel opacity={buttonTextT} text="Primary" />
+                  )}
+                  {isRow2Text && (
+                    <ColorLabel
+                      text={ROW2_LABELS[slotIndexFromX(rowTargetX[color])]}
+                      color={color}
+                    />
+                  )}
+                </span>
               );
             })}
 
@@ -369,38 +781,104 @@ function App() {
               const local = clamp01((spawnT - spawnThreshold) / 0.05);
 
               const rowStage = rowStageByColor[color];
+              const isRow3Button = ROW3_BUTTON_COLORS.includes(color);
+              const isRow2Text = ROW2_TEXT_COLORS.includes(color);
+              let width = 24;
+              let height = 24;
+              let radius = 9999;
               if (rowStage !== undefined) {
                 x = lerp(x, rowTargetX[color], rowStage);
                 y = lerp(y, rowTargetY[color], rowStage);
+                const morphed = isRow2Text
+                  ? morphRow2(x, slotIndexFromX(rowTargetX[color]), morphT)
+                  : isRow3Button
+                    ? morphRow3(x, slotIndexFromX(rowTargetX[color]), morphT)
+                    : morphShape(
+                        x,
+                        rowTargetY[color],
+                        slotIndexFromX(rowTargetX[color]),
+                        morphT,
+                        rowTargetY[color] === ROW1_Y ? ROW1_RADIUS : SHAPE_RADIUS,
+                      );
+                x = morphed.x;
+                width = morphed.width;
+                height = morphed.height;
+                radius = morphed.radius;
               }
 
               return (
                 <span
                   key={i}
-                  className="absolute w-6 h-6 rounded-full ring-1 ring-white/10"
+                  className={`absolute${isRow3Button || isRow2Text ? ' flex items-center justify-center overflow-hidden' : ''}`}
                   style={{
-                    backgroundColor: color,
+                    backgroundColor: isRow2Text
+                      ? hexToRgba(color, row2BgAlpha)
+                      : color,
                     left: x,
-                    top: y,
+                    top: y + (height - 24) / 2,
+                    width,
+                    height,
+                    borderRadius: radius,
                     opacity: rowStage !== undefined ? local : local * fade,
                     transform: `translate(-50%, -50%) scale(${0.2 + local * 0.8})`,
+                    boxShadow: isRow3Button
+                      ? `0px 2px 1px rgba(0, 0, 0, ${0.25 * morphT})`
+                      : isRow2Text
+                        ? `inset 0 0 0 1px rgba(255, 255, 255, ${0.1 * row2BgAlpha})`
+                        : GREYSCALE_STROKE_COLORS.includes(color)
+                          ? `0 0 0 1px rgba(255, 255, 255, ${0.1 * (1 - morphT)}), inset 0 1px 1px rgba(255, 255, 255, ${0.08 * morphT})`
+                          : undefined,
                   }}
-                />
+                >
+                  {isRow3Button && (
+                    <ButtonLabel
+                      opacity={buttonTextT}
+                      text="Tertiary"
+                      color="#D4D8DE"
+                    />
+                  )}
+                  {isRow2Text && (
+                    <ColorLabel
+                      text={ROW2_LABELS[slotIndexFromX(rowTargetX[color])]}
+                      color={color}
+                    />
+                  )}
+                </span>
               );
             })}
 
+            {(() => {
+              const baseX = lerp(BLUE_START_X, rowTargetX[blueRow[0]], stageRow4);
+              const baseY = lerp(BLUE_Y, rowTargetY[blueRow[0]], stageRow4);
+              const morphed = morphShape(
+                baseX,
+                rowTargetY[blueRow[0]],
+                slotIndexFromX(rowTargetX[blueRow[0]]),
+                morphT,
+                BUTTON_RADIUS,
+              );
+              return (
+                <span
+                  className="absolute flex items-center justify-center overflow-hidden"
+                  style={{
+                    backgroundColor: blueRow[0],
+                    left: morphed.x,
+                    top: baseY + (morphed.height - 24) / 2,
+                    width: morphed.width,
+                    height: morphed.height,
+                    borderRadius: morphed.radius,
+                    opacity: blueLeftLocal,
+                    transform: `translate(-50%, -50%) scale(${0.2 + blueLeftLocal * 0.8})`,
+                    border: `1px solid ${hexToRgba(CHIP_STROKE_COLOR, morphT)}`,
+                    boxShadow: `0px 2px 1px rgba(0, 0, 0, ${0.25 * morphT})`,
+                  }}
+                >
+                  <ChipLabel opacity={buttonTextT} />
+                </span>
+              );
+            })()}
             <span
-              className="absolute w-6 h-6 rounded-full ring-1 ring-white/10"
-              style={{
-                backgroundColor: blueRow[0],
-                left: lerp(BLUE_START_X, rowTargetX[blueRow[0]], stageRow4),
-                top: lerp(BLUE_Y, rowTargetY[blueRow[0]], stageRow4),
-                opacity: blueLeftLocal,
-                transform: `translate(-50%, -50%) scale(${0.2 + blueLeftLocal * 0.8})`,
-              }}
-            />
-            <span
-              className="absolute w-6 h-6 rounded-full ring-1 ring-white/10"
+              className="absolute w-6 h-6 rounded-full"
               style={{
                 backgroundColor: blueRow[2],
                 left: rowX(2),
@@ -410,7 +888,7 @@ function App() {
               }}
             />
             <span
-              className="absolute w-6 h-6 rounded-full ring-1 ring-white/10"
+              className="absolute w-6 h-6 rounded-full"
               style={{
                 backgroundColor: blueRow[3],
                 left: rowX(3),
@@ -423,39 +901,82 @@ function App() {
             {tealRow.map((color, i) => {
               const local = [teal0Local, teal1Local, teal2Local][i];
               const rowStage = rowStageByColor[color];
-              const x =
-                rowStage !== undefined
-                  ? lerp(rowX(i), rowTargetX[color], rowStage)
-                  : rowX(i);
-              const y =
-                rowStage !== undefined
-                  ? lerp(TEAL_Y, rowTargetY[color], rowStage)
-                  : TEAL_Y;
+              let x = rowX(i);
+              let y = TEAL_Y;
+              const isRow3Button = ROW3_BUTTON_COLORS.includes(color);
+              let width = 24;
+              let height = 24;
+              let radius = 9999;
+              if (rowStage !== undefined) {
+                x = lerp(x, rowTargetX[color], rowStage);
+                y = lerp(y, rowTargetY[color], rowStage);
+                const morphed = isRow3Button
+                  ? morphRow3(x, slotIndexFromX(rowTargetX[color]), morphT)
+                  : morphShape(
+                      x,
+                      rowTargetY[color],
+                      slotIndexFromX(rowTargetX[color]),
+                      morphT,
+                    );
+                x = morphed.x;
+                width = morphed.width;
+                height = morphed.height;
+                radius = morphed.radius;
+              }
+
               return (
                 <span
                   key={color}
-                  className="absolute w-6 h-6 rounded-full ring-1 ring-white/10"
+                  className={`absolute${isRow3Button ? ' flex items-center justify-center overflow-hidden' : ''}`}
                   style={{
                     backgroundColor: color,
                     left: x,
-                    top: y,
+                    top: y + (height - 24) / 2,
+                    width,
+                    height,
+                    borderRadius: radius,
                     opacity: rowStage !== undefined ? local : local * fade,
                     transform: `translate(-50%, -50%) scale(${0.2 + local * 0.8})`,
+                    boxShadow: isRow3Button
+                      ? `0px 2px 1px rgba(0, 0, 0, ${0.25 * morphT})`
+                      : undefined,
                   }}
-                />
+                >
+                  {isRow3Button && (
+                    <ButtonLabel opacity={buttonTextT} text="Secondary" />
+                  )}
+                </span>
               );
             })}
 
-            <span
-              className="absolute w-6 h-6 rounded-full ring-1 ring-white/10"
-              style={{
-                backgroundColor: purpleColor,
-                left: lerp(rowX(0), rowTargetX[purpleColor], stageRow5),
-                top: lerp(PURPLE_Y, rowTargetY[purpleColor], stageRow5),
-                opacity: purpleLocal,
-                transform: `translate(-50%, -50%) scale(${0.2 + purpleLocal * 0.8})`,
-              }}
-            />
+            {(() => {
+              const baseX = lerp(rowX(0), rowTargetX[purpleColor], stageRow5);
+              const baseY = lerp(PURPLE_Y, rowTargetY[purpleColor], stageRow5);
+              const morphed = morphRow5(
+                baseX,
+                slotIndexFromX(rowTargetX[purpleColor]),
+                rowShapeByY[ROW5_Y].height,
+                BUTTON_RADIUS,
+                morphT,
+              );
+              return (
+                <span
+                  className="absolute flex items-center justify-center overflow-hidden"
+                  style={{
+                    backgroundColor: purpleColor,
+                    left: morphed.x,
+                    top: baseY + (morphed.height - 24) / 2,
+                    width: morphed.width,
+                    height: morphed.height,
+                    borderRadius: morphed.radius,
+                    opacity: purpleLocal,
+                    transform: `translate(-50%, -50%) scale(${0.2 + purpleLocal * 0.8})`,
+                  }}
+                >
+                  <NewLabel opacity={buttonTextT} />
+                </span>
+              );
+            })()}
 
             <span
               className="absolute text-white/70 text-sm tracking-wide whitespace-nowrap"
@@ -493,26 +1014,62 @@ function App() {
               Analogous
             </span>
 
-            <span
-              className="absolute w-6 h-6 rounded-full ring-1 ring-white/10"
-              style={{
-                backgroundColor: greenColor,
-                left: lerp(rowX(0), rowTargetX[greenColor], stageRow5),
-                top: lerp(GREEN_Y, rowTargetY[greenColor], stageRow5),
-                opacity: greenLocal,
-                transform: `translate(-50%, -50%) scale(${0.2 + greenLocal * 0.8})`,
-              }}
-            />
-            <span
-              className="absolute w-6 h-6 rounded-full ring-1 ring-white/10"
-              style={{
-                backgroundColor: redColor,
-                left: lerp(rowX(0), rowTargetX[redColor], stageRow5),
-                top: lerp(RED_Y, rowTargetY[redColor], stageRow5),
-                opacity: redLocal,
-                transform: `translate(-50%, -50%) scale(${0.2 + redLocal * 0.8})`,
-              }}
-            />
+            {(() => {
+              const baseX = lerp(rowX(0), rowTargetX[greenColor], stageRow5);
+              const baseY = lerp(GREEN_Y, rowTargetY[greenColor], stageRow5);
+              const morphed = morphRow5(
+                baseX,
+                slotIndexFromX(rowTargetX[greenColor]),
+                20,
+                20,
+                morphT,
+              );
+              return (
+                <span
+                  className="absolute flex items-center justify-center overflow-hidden"
+                  style={{
+                    backgroundColor: greenColor,
+                    left: morphed.x,
+                    top: baseY + (morphed.height - 24) / 2,
+                    width: morphed.width,
+                    height: morphed.height,
+                    borderRadius: morphed.radius,
+                    opacity: greenLocal,
+                    transform: `translate(-50%, -50%) scale(${0.2 + greenLocal * 0.8})`,
+                  }}
+                >
+                  <CheckIcon opacity={buttonTextT} />
+                </span>
+              );
+            })()}
+            {(() => {
+              const baseX = lerp(rowX(0), rowTargetX[redColor], stageRow5);
+              const baseY = lerp(RED_Y, rowTargetY[redColor], stageRow5);
+              const morphed = morphRow5(
+                baseX,
+                slotIndexFromX(rowTargetX[redColor]),
+                20,
+                20,
+                morphT,
+              );
+              return (
+                <span
+                  className="absolute flex items-center justify-center overflow-hidden"
+                  style={{
+                    backgroundColor: redColor,
+                    left: morphed.x,
+                    top: baseY + (morphed.height - 24) / 2,
+                    width: morphed.width,
+                    height: morphed.height,
+                    borderRadius: morphed.radius,
+                    opacity: redLocal,
+                    transform: `translate(-50%, -50%) scale(${0.2 + redLocal * 0.8})`,
+                  }}
+                >
+                  <DashIcon opacity={buttonTextT} />
+                </span>
+              );
+            })()}
 
             {/* row 3: a second #333A42 sits exactly on top of the original
                 (same spawn position, same appear timing) so the two are
@@ -525,19 +1082,29 @@ function App() {
                 (dupSpawnX - WHITE_START_X) / (WHITE_END_X - WHITE_START_X),
               );
               const local = clamp01((spawnT - spawnThreshold) / 0.05);
-              const x = lerp(dupSpawnX, NEW_ROW3_X2, stageRow3);
-              const y = lerp(ROW_Y, ROW3_Y, stageRow3);
+              const baseX = lerp(dupSpawnX, NEW_ROW3_X2, stageRow3);
+              const baseY = lerp(ROW_Y, ROW3_Y, stageRow3);
+              const morphed = morphRow3(baseX, 3, morphT);
               return (
                 <span
-                  className="absolute w-6 h-6 rounded-full ring-1 ring-white/10"
+                  className="absolute flex items-center justify-center overflow-hidden"
                   style={{
                     backgroundColor: '#333A42',
-                    left: x,
-                    top: y,
+                    left: morphed.x,
+                    top: baseY + (morphed.height - 24) / 2,
+                    width: morphed.width,
+                    height: morphed.height,
+                    borderRadius: morphed.radius,
                     opacity: local,
                     transform: `translate(-50%, -50%) scale(${0.2 + local * 0.8})`,
                   }}
-                />
+                >
+                  <ButtonLabel
+                    opacity={buttonTextT}
+                    text="Disabled"
+                    color="#545F6D"
+                  />
+                </span>
               );
             })()}
 
