@@ -808,6 +808,12 @@ const paragraphs = [
 function App() {
   const { ref, progress } = useScrollProgress<HTMLDivElement>();
 
+  // the whole original sequence below is compressed into 0 -> 0.85 (every
+  // threshold and span scaled by TIMELINE_SCALE, preserving how each stage
+  // hands off to the next), freeing up 0.85 -> 1 for the new outro stage:
+  // everything scrolls up and vanishes, revealing the new illustration
+  // underneath.
+  //
   // 0    -> 0.07: circles appear next to the logo
   // 0.07 -> 0.11: logo fades out, circles slide into their grid layout
   // 0.11 -> 0.21: white slides right, the greyscale spawns in along the way
@@ -818,16 +824,20 @@ function App() {
   //               fades away
   // 0.7  -> 0.85: every circle in a row morphs into that row's shape
   // 0.85 -> 1:    row 1's swatches restack into overlapping cards
-  const appearEnd = 0.07;
-  const moveT = clamp01((progress - appearEnd) / 0.04);
-  const spawnT = clamp01((progress - 0.11) / 0.1);
+  // (all scaled by TIMELINE_SCALE)
+  // 0.85 -> 1:    outro — everything scrolls up and fades out, the new
+  //               illustration fades in underneath
+  const TIMELINE_SCALE = 0.85;
+  const appearEnd = 0.07 * TIMELINE_SCALE;
+  const moveT = clamp01((progress - appearEnd) / (0.04 * TIMELINE_SCALE));
+  const spawnT = clamp01((progress - 0.11 * TIMELINE_SCALE) / (0.1 * TIMELINE_SCALE));
   const svgOpacity = 1 - moveT;
 
   // "Neutrals" fades in once the new shades of grey start appearing,
   // not while black and white are just settling into the grid
   const neutralsLabelLocal = spawnT;
 
-  const stageD = clamp01((progress - 0.21) / 0.08);
+  const stageD = clamp01((progress - 0.21 * TIMELINE_SCALE) / (0.08 * TIMELINE_SCALE));
   const blueMoveT = clamp01(stageD / 0.35);
   const blueLeftLocal = clamp01((stageD - 0.15) / 0.35);
   const blueRight1Local = clamp01((stageD - 0.45) / 0.35);
@@ -838,7 +848,7 @@ function App() {
 
   // the teal row and the purple circle unfold together: the row cascades
   // left to right, while purple starts at the same moment as the first dot
-  const stageRows = clamp01((progress - 0.29) / 0.1);
+  const stageRows = clamp01((progress - 0.29 * TIMELINE_SCALE) / (0.1 * TIMELINE_SCALE));
   const teal0Local = clamp01(stageRows / 0.5);
   const teal1Local = clamp01((stageRows - 0.15) / 0.5);
   const teal2Local = clamp01((stageRows - 0.3) / 0.5);
@@ -848,7 +858,7 @@ function App() {
   const analogousLabelLocal = clamp01(stageRows / 0.5);
 
   // green and red spawn in together
-  const stageSignal = clamp01((progress - 0.39) / 0.11);
+  const stageSignal = clamp01((progress - 0.39 * TIMELINE_SCALE) / (0.11 * TIMELINE_SCALE));
   const greenLocal = clamp01(stageSignal / 0.6);
   const redLocal = clamp01(stageSignal / 0.6);
 
@@ -857,38 +867,44 @@ function App() {
 
   // all five rows form together, then every claimed circle morphs into
   // its row's rectangular shape
-  const stageRowAll = clamp01((progress - 0.5) / 0.2);
+  const stageRowAll = clamp01((progress - 0.5 * TIMELINE_SCALE) / (0.2 * TIMELINE_SCALE));
   const stageRow1 = stageRowAll;
   const stageRow2 = stageRowAll;
   const stageRow3 = stageRowAll;
   const stageRow4 = stageRowAll;
   const stageRow5 = stageRowAll;
-  const morphT = clamp01((progress - 0.7) / 0.15);
+  const morphT = clamp01((progress - 0.7 * TIMELINE_SCALE) / (0.15 * TIMELINE_SCALE));
 
   // row 1's swatches restack into overlapping cards, row 2's text frames
   // onto the first card, and row 3's buttons frame onto the duplicate stack
-  const stackT = clamp01((progress - 0.85) / 0.04);
+  const stackT = clamp01((progress - 0.85 * TIMELINE_SCALE) / (0.04 * TIMELINE_SCALE));
 
   // only once that initial move settles does row 2's text duplicate and
   // the copy shift down to sit framed against the stack's second card
-  const textDupT = clamp01((progress - 0.89) / 0.03);
+  const textDupT = clamp01((progress - 0.89 * TIMELINE_SCALE) / (0.03 * TIMELINE_SCALE));
 
   // then, once that second copy settles, it duplicates again and the new
   // copy shifts down another 43px to sit framed against the third card
-  const textDupT2 = clamp01((progress - 0.92) / 0.03);
+  const textDupT2 = clamp01((progress - 0.92 * TIMELINE_SCALE) / (0.03 * TIMELINE_SCALE));
 
   // then, three words spawn in underneath the stacked groups, one at a time
-  const wordsT = clamp01((progress - 0.95) / 0.025);
+  const wordsT = clamp01((progress - 0.95 * TIMELINE_SCALE) / (0.025 * TIMELINE_SCALE));
   const word1Local = clamp01(wordsT / (1 / 3));
   const word2Local = clamp01((wordsT - 1 / 3) / (1 / 3));
   const word3Local = clamp01((wordsT - 2 / 3) / (1 / 3));
 
   // finally, once those words have all spawned, a green checkmark appears
   // to the left of each one, one at a time, and its text turns to match
-  const checksT = clamp01((progress - 0.975) / 0.025);
+  const checksT = clamp01((progress - 0.975 * TIMELINE_SCALE) / (0.025 * TIMELINE_SCALE));
   const check1Local = clamp01(checksT / (1 / 3));
   const check2Local = clamp01((checksT - 1 / 3) / (1 / 3));
   const check3Local = clamp01((checksT - 2 / 3) / (1 / 3));
+
+  // outro: everything scrolls up and fades out together, while the new
+  // illustration fades in underneath it partway through
+  const outroT = clamp01((progress - TIMELINE_SCALE) / (1 - TIMELINE_SCALE));
+  const OUTRO_LIFT = 200; // px the whole canvas rises as it vanishes
+  const revealT = clamp01((outroT - 0.3) / 0.7);
 
   // row 3's button label only shows up once the shape is mostly a rectangle
   const buttonTextT = clamp01((morphT - 0.6) / 0.4);
@@ -898,7 +914,7 @@ function App() {
   const row2BgAlpha = 1 - clamp01((morphT - 0.6) / 0.4);
 
   // everything not claimed by a row fades away early in that sequence
-  const fade = 1 - clamp01((progress - 0.5) / 0.15);
+  const fade = 1 - clamp01((progress - 0.5 * TIMELINE_SCALE) / (0.15 * TIMELINE_SCALE));
 
   const rowStageByColor: Record<string, number> = {
     '#121212': stageRow1,
@@ -921,6 +937,12 @@ function App() {
       <div ref={ref} className="grid grid-cols-2">
         <div className="sticky top-0 h-screen flex items-center justify-center">
           <div className="relative w-[460px] max-w-full h-[560px]">
+            <div
+              style={{
+                transform: `translateY(${-outroT * OUTRO_LIFT}px)`,
+                opacity: 1 - outroT,
+              }}
+            >
             <svg
               width="200"
               height="200"
@@ -1806,6 +1828,19 @@ function App() {
 
             {/* DEBUG GRID — toggle SHOW_DEBUG_GRID above to bring this back */}
             {SHOW_DEBUG_GRID && <DebugGrid width={460} height={560} />}
+            </div>
+
+            {/* new illustration, revealed underneath as everything above
+                scrolls up and vanishes — PLACEHOLDER: swap in the real
+                dashboard SVG here */}
+            <div
+              className="absolute inset-0 flex items-center justify-center pointer-events-none"
+              style={{ opacity: revealT }}
+            >
+              <div className="w-full h-full rounded-2xl border border-dashed border-white/20 flex items-center justify-center text-white/40 text-sm">
+                illustration placeholder
+              </div>
+            </div>
           </div>
         </div>
 
