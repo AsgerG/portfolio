@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 
 function useScrollProgress<T extends HTMLElement>() {
   const ref = useRef<T>(null);
@@ -42,6 +42,21 @@ function hexToRgba(hex: string, alpha: number) {
   const g = parseInt(hex.slice(3, 5), 16);
   const b = parseInt(hex.slice(5, 7), 16);
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+// smoothly blends between two hex colours, used to turn each word's text
+// green as its checkmark spawns in
+function lerpColor(hexA: string, hexB: string, t: number) {
+  const ar = parseInt(hexA.slice(1, 3), 16);
+  const ag = parseInt(hexA.slice(3, 5), 16);
+  const ab = parseInt(hexA.slice(5, 7), 16);
+  const br = parseInt(hexB.slice(1, 3), 16);
+  const bg = parseInt(hexB.slice(3, 5), 16);
+  const bb = parseInt(hexB.slice(5, 7), 16);
+  const r = Math.round(lerp(ar, br, t));
+  const g = Math.round(lerp(ag, bg, t));
+  const b = Math.round(lerp(ab, bb, t));
+  return `rgb(${r}, ${g}, ${b})`;
 }
 
 // a flat per-character width overestimates words with a lot of narrow
@@ -88,6 +103,42 @@ function estimateTextWidth(text: string, fontSize: number) {
   }
   return em * fontSize;
 }
+
+// ===== DEBUG GRID (temporary — delete this component and its one usage
+// below when done sizing) =====
+// Draws a 100px grid over the animation canvas with axis labels, purely as
+// a sizing reference. It's absolutely positioned and pointer-events-none,
+// so it never affects layout or interaction, and isn't part of the
+// animation itself — nothing here reads scroll progress.
+const SHOW_DEBUG_GRID = false;
+function DebugGrid({ width, height, step = 100 }: { width: number; height: number; step?: number }) {
+  const xLines: number[] = [];
+  for (let x = 0; x <= width; x += step) xLines.push(x);
+  const yLines: number[] = [];
+  for (let y = 0; y <= height; y += step) yLines.push(y);
+
+  return (
+    <div className="absolute inset-0 pointer-events-none z-50">
+      {xLines.map((x) => (
+        <div key={`gx${x}`} className="absolute top-0 bottom-0" style={{ left: x }}>
+          <div className="absolute top-0 bottom-0 border-l border-red-500/40" />
+          <span className="absolute top-0 left-1 text-[10px] leading-none text-red-400/80 font-mono">
+            {x}
+          </span>
+        </div>
+      ))}
+      {yLines.map((y) => (
+        <div key={`gy${y}`} className="absolute left-0 right-0" style={{ top: y }}>
+          <div className="absolute left-0 right-0 border-t border-red-500/40" />
+          <span className="absolute left-1 top-0 text-[10px] leading-none text-red-400/80 font-mono">
+            {y}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+// ===== END DEBUG GRID =====
 
 type Point = { x: number; y: number };
 
@@ -232,6 +283,125 @@ const MORPH_GAP = 8;
 const SHAPE_RADIUS = 8;
 const BUTTON_RADIUS = 4; // row 3's buttons get a tighter corner radius
 const ROW1_RADIUS = 16; // row 1's elements get a rounder corner radius
+
+// after row 1 settles into its 120x40 swatches, they restack into cards,
+// left-aligned at the same edge, with the lowest card rendered on top.
+// The top group's card size is derived from its margins around the row-2
+// text framed on top of it: 16px left/right margin, 8px top/bottom margin,
+// and a 12px overlap between successive cards.
+const ROW1_STACK_MARGIN_X = 16;
+const ROW1_STACK_MARGIN_TOP = 8;
+const ROW1_STACK_MARGIN_BOTTOM = 8;
+const ROW1_STACK_OVERLAP = 12;
+const ROW1_STACK_CONTENT_HEIGHT = 27; // row-2 text line height (18px * 1.5)
+// width of "Primary  Secondary  Tertiary" at their current sizes/spacing
+const ROW1_STACK_CONTENT_WIDTH = 256;
+const STACK_WIDTH =
+  ROW1_STACK_MARGIN_X + ROW1_STACK_CONTENT_WIDTH + ROW1_STACK_MARGIN_X; // 288
+const STACK_HEIGHT =
+  ROW1_STACK_MARGIN_TOP +
+  ROW1_STACK_CONTENT_HEIGHT +
+  ROW1_STACK_MARGIN_BOTTOM +
+  ROW1_STACK_OVERLAP; // 55
+const STACK_GAP_Y = STACK_HEIGHT - ROW1_STACK_OVERLAP; // 43
+const ROW1_TOP_EDGE = ROW1_Y - 12; // the fixed top edge row 1 already renders at
+
+// once stacking begins, both the top and bottom card groups lift higher
+// than their natural row position. The bottom group lifts an extra bit
+// further still, closing up the gap between the two groups.
+const GROUP_LIFT = 60;
+const LOWER_GROUP_EXTRA_LIFT = 20;
+
+// once the third text duplicate lands (Primary + Secondary only, no
+// Tertiary), the last card narrows to fit just those two labels instead
+// of anticipating all three
+const ROW1_STACK_LAST_CONTENT_WIDTH = 176; // "Primary" + gap + "Secondary"
+const ROW1_STACK_LAST_WIDTH =
+  ROW1_STACK_MARGIN_X + ROW1_STACK_LAST_CONTENT_WIDTH + ROW1_STACK_MARGIN_X; // 208
+
+function stackRow1(
+  centerX: number,
+  y: number,
+  width: number,
+  height: number,
+  slotIndex: number,
+  stackT: number,
+  lastWidthT: number = 0,
+) {
+  const baseTopEdge = y - 12;
+  const topEdge =
+    baseTopEdge + slotIndex * STACK_GAP_Y * stackT - GROUP_LIFT * stackT;
+  // only the last (third) card narrows, and only once lastWidthT ramps in
+  const targetWidth =
+    slotIndex === 2
+      ? lerp(STACK_WIDTH, ROW1_STACK_LAST_WIDTH, lastWidthT)
+      : STACK_WIDTH;
+  const targetCenterX = BOX_START_X + targetWidth / 2;
+  const newWidth = lerp(width, targetWidth, stackT);
+  const newHeight = lerp(height, STACK_HEIGHT, stackT);
+  return {
+    x: lerp(centerX, targetCenterX, stackT),
+    top: topEdge + newHeight / 2,
+    width: newWidth,
+    height: newHeight,
+    zIndex: slotIndex + 1,
+  };
+}
+
+// row 1 also spawns a duplicate of each element, sitting exactly on top of
+// the original until the resize begins. Then, while the original stacks
+// upward into overlapping cards, the duplicate grows to a wider card
+// (left-aligned at the same edge) and stacks the same way, 220px further
+// down the canvas. Same left/right margin and overlap as the top group,
+// but a taller 16px top/bottom margin — sized here around the row-3
+// buttons ("Primary Secondary Tertiary Disabled") framed on top of it
+// instead of the row-2 text.
+const DUPLICATE_ROW_Y_OFFSET = 220;
+const DUPLICATE_MARGIN_TOP = 16;
+const DUPLICATE_MARGIN_BOTTOM = 16;
+const ROW3_STACK_CONTENT_HEIGHT = 28; // row-3 button height
+// width of "Primary Secondary Tertiary Disabled" at their current sizes/spacing
+const ROW3_STACK_CONTENT_WIDTH = 395;
+const DUPLICATE_WIDTH =
+  ROW1_STACK_MARGIN_X + ROW3_STACK_CONTENT_WIDTH + ROW1_STACK_MARGIN_X; // 427
+const DUPLICATE_HEIGHT =
+  DUPLICATE_MARGIN_TOP +
+  ROW3_STACK_CONTENT_HEIGHT +
+  DUPLICATE_MARGIN_BOTTOM +
+  ROW1_STACK_OVERLAP; // 72
+const DUPLICATE_GAP_Y = DUPLICATE_HEIGHT - ROW1_STACK_OVERLAP; // 60
+const DUPLICATE_CENTER_X = BOX_START_X + DUPLICATE_WIDTH / 2;
+
+const WARNING_ICON_SIZE = 20; // shared icon size for the checkmark badge
+
+function duplicateRow1(
+  centerX: number,
+  y: number,
+  width: number,
+  height: number,
+  slotIndex: number,
+  stackT: number,
+) {
+  const newWidth = lerp(width, DUPLICATE_WIDTH, stackT);
+  const newHeight = lerp(height, DUPLICATE_HEIGHT, stackT);
+  const baseTopEdge = y - 12;
+  // same overlapping-stack layout as stackRow1, just shifted down by the
+  // fixed offset — the last (lowest) card still ends up on top
+  const topEdge =
+    baseTopEdge +
+    DUPLICATE_ROW_Y_OFFSET * stackT +
+    slotIndex * DUPLICATE_GAP_Y * stackT -
+    GROUP_LIFT * stackT -
+    LOWER_GROUP_EXTRA_LIFT * stackT;
+  return {
+    x: lerp(centerX, DUPLICATE_CENTER_X, stackT),
+    top: topEdge + newHeight / 2,
+    width: newWidth,
+    height: newHeight,
+    zIndex: slotIndex + 1,
+  };
+}
+
 const rowShapeByY: Record<number, { width: number; height: number }> = {
   [ROW1_Y]: { width: 120, height: 40 }, // background
   [ROW2_Y]: { width: 85, height: 24 }, // text
@@ -325,15 +495,32 @@ function row3Left(slotIndex: number) {
   }
   return left;
 }
+// once row 1's duplicates stack, row 3's buttons also nudge up and right
+// to sit framed in the corner of the duplicate stack's top card: 16px below
+// its top edge (matching the duplicate stack's own top/bottom margin),
+// 16px right of its left edge, keeping the buttons' own relative spacing
+const ROW3_STACK_MARGIN_TOP = DUPLICATE_MARGIN_TOP;
+const ROW3_STACK_MARGIN_LEFT = 16;
+const ROW3_STACK_TOP_EDGE =
+  ROW1_TOP_EDGE +
+  DUPLICATE_ROW_Y_OFFSET +
+  ROW3_STACK_MARGIN_TOP -
+  GROUP_LIFT -
+  LOWER_GROUP_EXTRA_LIFT;
+const ROW3_STACK_LEFT_X = BOX_START_X + ROW3_STACK_MARGIN_LEFT;
+
 function morphRow3(
   centerX: number,
   slotIndex: number,
   morphT: number,
+  stackT: number,
   endRadius: number = BUTTON_RADIUS,
 ) {
   const targetWidth = ROW3_WIDTHS[slotIndex];
   const targetHeight = rowShapeByY[ROW3_Y].height;
-  const rectLeft = row3Left(slotIndex);
+  const baseLeft = row3Left(slotIndex);
+  const stackedLeft = ROW3_STACK_LEFT_X + (baseLeft - BOX_START_X);
+  const rectLeft = lerp(baseLeft, stackedLeft, stackT);
   const rectCenterX = rectLeft + targetWidth / 2;
   return {
     x: lerp(centerX, rectCenterX, morphT),
@@ -341,6 +528,14 @@ function morphRow3(
     height: lerp(24, targetHeight, morphT),
     radius: lerp(12, endRadius, morphT),
   };
+}
+
+// row 3's vertical position while framing against the duplicate stack (see
+// morphRow3 above for the matching horizontal shift)
+function row3StackTop(y: number, height: number, stackT: number) {
+  const baseTopEdge = y - height / 2;
+  const topEdge = lerp(baseTopEdge, ROW3_STACK_TOP_EDGE, stackT);
+  return topEdge + height / 2;
 }
 
 // row 4 is styled like row 3's buttons, but with an added #0284C7 stroke:
@@ -453,10 +648,40 @@ function DashIcon({ opacity }: { opacity: number }) {
   );
 }
 
+// spawns to the left of each of the three words, one at a time, as the
+// word's own text color turns green
+const CHECK_GREEN = '#21C45D';
+function SuccessIcon({ opacity }: { opacity: number }) {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 20 20"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      style={{ opacity }}
+    >
+      <path
+        fillRule="evenodd"
+        clipRule="evenodd"
+        d="M20 10.0004C20 15.5232 15.5228 20.0004 10 20.0004C4.47715 20.0004 0 15.5232 0 10.0004C0 4.47752 4.47715 0.000366211 10 0.000366211C15.5228 0.000366211 20 4.47752 20 10.0004Z"
+        fill={CHECK_GREEN}
+      />
+      <path
+        d="M3.74995 10.4928L5.4545 8.78822L8.10601 11.4398L14.5454 5.00024L16.25 6.70484L8.10601 14.849L3.74995 10.4928Z"
+        fill="white"
+      />
+    </svg>
+  );
+}
+
 // row 2 becomes text swatches: each box's background fades away, leaving
 // behind a label set in that same colour ("Primary"/"Secondary"/"Tertiary",
 // left to right) so the colour itself becomes the visible element
 const ROW2_TEXT_COLORS = ['#FFFFFF', '#D4D8DE', '#9CA6B2'];
+// the last (third) duplicate only carries Primary + Secondary onto the
+// last card — Tertiary doesn't get a third copy
+const ROW2_LAST_DUP_COLORS = ['#FFFFFF', '#D4D8DE'];
 const ROW2_LABELS = ['Primary', 'Secondary', 'Tertiary'];
 const ROW2_FONT_SIZE = 18;
 
@@ -484,9 +709,24 @@ function row2Left(slotIndex: number) {
   }
   return left;
 }
-function morphRow2(centerX: number, slotIndex: number, morphT: number) {
+// once row 1 restacks, row 2's text also nudges up and right to sit framed
+// in the corner of row 1's first (black) card: 8px below its top edge,
+// 20px right of its left edge, keeping the labels' own relative spacing
+const ROW2_STACK_MARGIN_TOP = 8;
+const ROW2_STACK_MARGIN_LEFT = 16;
+const ROW2_STACK_TOP_EDGE = ROW1_TOP_EDGE + ROW2_STACK_MARGIN_TOP - GROUP_LIFT;
+const ROW2_STACK_LEFT_X = BOX_START_X + ROW2_STACK_MARGIN_LEFT;
+
+function morphRow2(
+  centerX: number,
+  slotIndex: number,
+  morphT: number,
+  stackT: number,
+) {
   const targetWidth = row2Widths[slotIndex];
-  const rectLeft = row2Left(slotIndex);
+  const baseLeft = row2Left(slotIndex);
+  const stackedLeft = ROW2_STACK_LEFT_X + (baseLeft - BOX_START_X);
+  const rectLeft = lerp(baseLeft, stackedLeft, stackT);
   const rectCenterX = rectLeft + targetWidth / 2;
   const height = rowShapeByY[ROW2_Y].height;
   return {
@@ -495,6 +735,14 @@ function morphRow2(centerX: number, slotIndex: number, morphT: number) {
     height: lerp(24, height, morphT),
     radius: lerp(12, SHAPE_RADIUS, morphT),
   };
+}
+
+// row 2's vertical position while stacking (see morphRow2 above for the
+// matching horizontal shift)
+function row2StackTop(y: number, height: number, stackT: number) {
+  const baseTopEdge = y - height / 2;
+  const topEdge = lerp(baseTopEdge, ROW2_STACK_TOP_EDGE, stackT);
+  return topEdge + height / 2;
 }
 
 // row 5 no longer shares one uniform width: purple stays the tag size,
@@ -566,9 +814,10 @@ function App() {
   // 0.21 -> 0.29: blue steps right, three shades of blue spawn in around it
   // 0.29 -> 0.39: the teal row + purple circle spawn underneath the blue row
   // 0.39 -> 0.5:  the signal group (green + red) spawns underneath that
-  // 0.5  -> 0.75: all five rows form together, as everything unclaimed
+  // 0.5  -> 0.7:  all five rows form together, as everything unclaimed
   //               fades away
-  // 0.75 -> 1:    every circle in a row morphs into that row's shape
+  // 0.7  -> 0.85: every circle in a row morphs into that row's shape
+  // 0.85 -> 1:    row 1's swatches restack into overlapping cards
   const appearEnd = 0.07;
   const moveT = clamp01((progress - appearEnd) / 0.04);
   const spawnT = clamp01((progress - 0.11) / 0.1);
@@ -608,13 +857,38 @@ function App() {
 
   // all five rows form together, then every claimed circle morphs into
   // its row's rectangular shape
-  const stageRowAll = clamp01((progress - 0.5) / 0.25);
+  const stageRowAll = clamp01((progress - 0.5) / 0.2);
   const stageRow1 = stageRowAll;
   const stageRow2 = stageRowAll;
   const stageRow3 = stageRowAll;
   const stageRow4 = stageRowAll;
   const stageRow5 = stageRowAll;
-  const morphT = clamp01((progress - 0.75) / 0.25);
+  const morphT = clamp01((progress - 0.7) / 0.15);
+
+  // row 1's swatches restack into overlapping cards, row 2's text frames
+  // onto the first card, and row 3's buttons frame onto the duplicate stack
+  const stackT = clamp01((progress - 0.85) / 0.04);
+
+  // only once that initial move settles does row 2's text duplicate and
+  // the copy shift down to sit framed against the stack's second card
+  const textDupT = clamp01((progress - 0.89) / 0.03);
+
+  // then, once that second copy settles, it duplicates again and the new
+  // copy shifts down another 43px to sit framed against the third card
+  const textDupT2 = clamp01((progress - 0.92) / 0.03);
+
+  // then, three words spawn in underneath the stacked groups, one at a time
+  const wordsT = clamp01((progress - 0.95) / 0.025);
+  const word1Local = clamp01(wordsT / (1 / 3));
+  const word2Local = clamp01((wordsT - 1 / 3) / (1 / 3));
+  const word3Local = clamp01((wordsT - 2 / 3) / (1 / 3));
+
+  // finally, once those words have all spawned, a green checkmark appears
+  // to the left of each one, one at a time, and its text turns to match
+  const checksT = clamp01((progress - 0.975) / 0.025);
+  const check1Local = clamp01(checksT / (1 / 3));
+  const check2Local = clamp01((checksT - 1 / 3) / (1 / 3));
+  const check3Local = clamp01((checksT - 2 / 3) / (1 / 3));
 
   // row 3's button label only shows up once the shape is mostly a rectangle
   const buttonTextT = clamp01((morphT - 0.6) / 0.4);
@@ -711,63 +985,185 @@ function App() {
               const rowStage = rowStageByColor[color];
               const isRow3Button = ROW3_BUTTON_COLORS.includes(color);
               const isRow2Text = ROW2_TEXT_COLORS.includes(color);
+              const isRow1Color = rowTargetY[color] === ROW1_Y;
               let width = 24;
               let height = 24;
               let radius = 9999;
+              let topStyle = y;
+              let zIndexStyle: number | undefined;
+              let duplicate: ReturnType<typeof duplicateRow1> | null = null;
               if (rowStage !== undefined) {
                 x = lerp(x, rowTargetX[color], rowStage);
                 y = lerp(y, rowTargetY[color], rowStage);
                 const morphed = isRow2Text
-                  ? morphRow2(x, slotIndexFromX(rowTargetX[color]), morphT)
+                  ? morphRow2(x, slotIndexFromX(rowTargetX[color]), morphT, stackT)
                   : isRow3Button
-                    ? morphRow3(x, slotIndexFromX(rowTargetX[color]), morphT)
+                    ? morphRow3(x, slotIndexFromX(rowTargetX[color]), morphT, stackT)
                     : morphShape(
                         x,
                         rowTargetY[color],
                         slotIndexFromX(rowTargetX[color]),
                         morphT,
-                        rowTargetY[color] === ROW1_Y ? ROW1_RADIUS : SHAPE_RADIUS,
+                        isRow1Color ? ROW1_RADIUS : SHAPE_RADIUS,
                       );
                 x = morphed.x;
                 width = morphed.width;
                 height = morphed.height;
                 radius = morphed.radius;
+                topStyle = isRow2Text
+                  ? row2StackTop(y, height, stackT)
+                  : isRow3Button
+                    ? row3StackTop(y, height, stackT)
+                    : y + (height - 24) / 2;
+                if (isRow1Color) {
+                  const slotIndex = slotIndexFromX(rowTargetX[color]);
+                  duplicate = duplicateRow1(x, y, width, height, slotIndex, stackT);
+                  const stacked = stackRow1(x, y, width, height, slotIndex, stackT, textDupT2);
+                  x = stacked.x;
+                  width = stacked.width;
+                  height = stacked.height;
+                  topStyle = stacked.top;
+                  zIndexStyle = stacked.zIndex;
+                }
               }
 
               return (
-                <span
-                  key={color}
-                  className={`absolute${isRow3Button || isRow2Text ? ' flex items-center justify-center overflow-hidden' : ''}`}
-                  style={{
-                    backgroundColor: isRow2Text
-                      ? hexToRgba(color, row2BgAlpha)
-                      : color,
-                    left: x,
-                    top: y + (height - 24) / 2,
-                    width,
-                    height,
-                    borderRadius: radius,
-                    opacity: rowStage !== undefined ? opacity : opacity * fade,
-                    transform: `translate(-50%, -50%) scale(${scale})`,
-                    boxShadow: isRow3Button
-                      ? `0px 2px 1px rgba(0, 0, 0, ${0.25 * morphT})`
-                      : isRow2Text
-                        ? `inset 0 0 0 1px rgba(255, 255, 255, ${0.1 * row2BgAlpha})`
-                        : GREYSCALE_STROKE_COLORS.includes(color)
+                <Fragment key={color}>
+                  <span
+                    className={`absolute${isRow3Button || isRow2Text ? ' flex items-center justify-center overflow-hidden' : ''}`}
+                    style={{
+                      backgroundColor: isRow2Text
+                        ? hexToRgba(color, row2BgAlpha)
+                        : color,
+                      left: x,
+                      top: topStyle,
+                      width,
+                      height,
+                      borderRadius: radius,
+                      zIndex: isRow2Text || isRow3Button ? 10 : zIndexStyle,
+                      opacity: rowStage !== undefined ? opacity : opacity * fade,
+                      transform: `translate(-50%, -50%) scale(${scale})`,
+                      boxShadow: isRow3Button
+                        ? `0px 2px 1px rgba(0, 0, 0, ${0.25 * morphT})`
+                        : isRow2Text
+                          ? `inset 0 0 0 1px rgba(255, 255, 255, ${0.1 * row2BgAlpha})`
+                          : GREYSCALE_STROKE_COLORS.includes(color)
+                            ? `0 0 0 1px rgba(255, 255, 255, ${0.1 * (1 - morphT)}), inset 0 1px 1px rgba(255, 255, 255, ${0.08 * morphT})`
+                            : undefined,
+                    }}
+                  >
+                    {isRow3Button && (
+                      <ButtonLabel opacity={buttonTextT} text="Primary" />
+                    )}
+                    {isRow2Text && (
+                      <ColorLabel
+                        text={ROW2_LABELS[slotIndexFromX(rowTargetX[color])]}
+                        color={color}
+                      />
+                    )}
+                  </span>
+                  {isRow2Text && (
+                    <span
+                      className="absolute flex items-center justify-center overflow-hidden"
+                      style={{
+                        backgroundColor: hexToRgba(color, row2BgAlpha),
+                        left: x,
+                        top: topStyle + STACK_GAP_Y * textDupT,
+                        width,
+                        height,
+                        borderRadius: radius,
+                        zIndex: 10,
+                        opacity: rowStage !== undefined ? opacity : opacity * fade,
+                        transform: `translate(-50%, -50%) scale(${scale})`,
+                        boxShadow: `inset 0 0 0 1px rgba(255, 255, 255, ${0.1 * row2BgAlpha})`,
+                      }}
+                    >
+                      <ColorLabel
+                        text={ROW2_LABELS[slotIndexFromX(rowTargetX[color])]}
+                        color={color}
+                      />
+                    </span>
+                  )}
+                  {ROW2_LAST_DUP_COLORS.includes(color) && (
+                    <span
+                      className="absolute flex items-center justify-center overflow-hidden"
+                      style={{
+                        backgroundColor: hexToRgba(color, row2BgAlpha),
+                        left: x,
+                        top: topStyle + STACK_GAP_Y * (textDupT + textDupT2),
+                        width,
+                        height,
+                        borderRadius: radius,
+                        zIndex: 10,
+                        opacity: rowStage !== undefined ? opacity : opacity * fade,
+                        transform: `translate(-50%, -50%) scale(${scale})`,
+                        boxShadow: `inset 0 0 0 1px rgba(255, 255, 255, ${0.1 * row2BgAlpha})`,
+                      }}
+                    >
+                      <ColorLabel
+                        text={ROW2_LABELS[slotIndexFromX(rowTargetX[color])]}
+                        color={color}
+                      />
+                    </span>
+                  )}
+                  {isRow3Button && (
+                    <span
+                      className="absolute flex items-center justify-center overflow-hidden"
+                      style={{
+                        backgroundColor: color,
+                        left: x,
+                        top: topStyle + DUPLICATE_GAP_Y * textDupT,
+                        width,
+                        height,
+                        borderRadius: radius,
+                        zIndex: 10,
+                        opacity: rowStage !== undefined ? opacity : opacity * fade,
+                        transform: `translate(-50%, -50%) scale(${scale})`,
+                        boxShadow: `0px 2px 1px rgba(0, 0, 0, ${0.25 * morphT})`,
+                      }}
+                    >
+                      <ButtonLabel opacity={buttonTextT} text="Primary" />
+                    </span>
+                  )}
+                  {isRow3Button && (
+                    <span
+                      className="absolute flex items-center justify-center overflow-hidden"
+                      style={{
+                        backgroundColor: color,
+                        left: x,
+                        top: topStyle + DUPLICATE_GAP_Y * (textDupT + textDupT2),
+                        width,
+                        height,
+                        borderRadius: radius,
+                        zIndex: 10,
+                        opacity: rowStage !== undefined ? opacity : opacity * fade,
+                        transform: `translate(-50%, -50%) scale(${scale})`,
+                        boxShadow: `0px 2px 1px rgba(0, 0, 0, ${0.25 * morphT})`,
+                      }}
+                    >
+                      <ButtonLabel opacity={buttonTextT} text="Primary" />
+                    </span>
+                  )}
+                  {duplicate && (
+                    <span
+                      className="absolute"
+                      style={{
+                        backgroundColor: color,
+                        left: duplicate.x,
+                        top: duplicate.top,
+                        width: duplicate.width,
+                        height: duplicate.height,
+                        borderRadius: radius,
+                        zIndex: duplicate.zIndex,
+                        opacity,
+                        transform: `translate(-50%, -50%) scale(${scale})`,
+                        boxShadow: GREYSCALE_STROKE_COLORS.includes(color)
                           ? `0 0 0 1px rgba(255, 255, 255, ${0.1 * (1 - morphT)}), inset 0 1px 1px rgba(255, 255, 255, ${0.08 * morphT})`
                           : undefined,
-                  }}
-                >
-                  {isRow3Button && (
-                    <ButtonLabel opacity={buttonTextT} text="Primary" />
-                  )}
-                  {isRow2Text && (
-                    <ColorLabel
-                      text={ROW2_LABELS[slotIndexFromX(rowTargetX[color])]}
-                      color={color}
+                      }}
                     />
                   )}
-                </span>
+                </Fragment>
               );
             })}
 
@@ -783,67 +1179,197 @@ function App() {
               const rowStage = rowStageByColor[color];
               const isRow3Button = ROW3_BUTTON_COLORS.includes(color);
               const isRow2Text = ROW2_TEXT_COLORS.includes(color);
+              const isRow1Color = rowTargetY[color] === ROW1_Y;
               let width = 24;
               let height = 24;
               let radius = 9999;
+              let topStyle = y;
+              let zIndexStyle: number | undefined;
+              let duplicate: ReturnType<typeof duplicateRow1> | null = null;
               if (rowStage !== undefined) {
                 x = lerp(x, rowTargetX[color], rowStage);
                 y = lerp(y, rowTargetY[color], rowStage);
                 const morphed = isRow2Text
-                  ? morphRow2(x, slotIndexFromX(rowTargetX[color]), morphT)
+                  ? morphRow2(x, slotIndexFromX(rowTargetX[color]), morphT, stackT)
                   : isRow3Button
-                    ? morphRow3(x, slotIndexFromX(rowTargetX[color]), morphT)
+                    ? morphRow3(x, slotIndexFromX(rowTargetX[color]), morphT, stackT)
                     : morphShape(
                         x,
                         rowTargetY[color],
                         slotIndexFromX(rowTargetX[color]),
                         morphT,
-                        rowTargetY[color] === ROW1_Y ? ROW1_RADIUS : SHAPE_RADIUS,
+                        isRow1Color ? ROW1_RADIUS : SHAPE_RADIUS,
                       );
                 x = morphed.x;
                 width = morphed.width;
                 height = morphed.height;
                 radius = morphed.radius;
+                topStyle = isRow2Text
+                  ? row2StackTop(y, height, stackT)
+                  : isRow3Button
+                    ? row3StackTop(y, height, stackT)
+                    : y + (height - 24) / 2;
+                if (isRow1Color) {
+                  const slotIndex = slotIndexFromX(rowTargetX[color]);
+                  duplicate = duplicateRow1(x, y, width, height, slotIndex, stackT);
+                  const stacked = stackRow1(x, y, width, height, slotIndex, stackT, textDupT2);
+                  x = stacked.x;
+                  width = stacked.width;
+                  height = stacked.height;
+                  topStyle = stacked.top;
+                  zIndexStyle = stacked.zIndex;
+                }
               }
 
               return (
-                <span
-                  key={i}
-                  className={`absolute${isRow3Button || isRow2Text ? ' flex items-center justify-center overflow-hidden' : ''}`}
-                  style={{
-                    backgroundColor: isRow2Text
-                      ? hexToRgba(color, row2BgAlpha)
-                      : color,
-                    left: x,
-                    top: y + (height - 24) / 2,
-                    width,
-                    height,
-                    borderRadius: radius,
-                    opacity: rowStage !== undefined ? local : local * fade,
-                    transform: `translate(-50%, -50%) scale(${0.2 + local * 0.8})`,
-                    boxShadow: isRow3Button
-                      ? `0px 2px 1px rgba(0, 0, 0, ${0.25 * morphT})`
-                      : isRow2Text
-                        ? `inset 0 0 0 1px rgba(255, 255, 255, ${0.1 * row2BgAlpha})`
-                        : GREYSCALE_STROKE_COLORS.includes(color)
+                <Fragment key={i}>
+                  <span
+                    className={`absolute${isRow3Button || isRow2Text ? ' flex items-center justify-center overflow-hidden' : ''}`}
+                    style={{
+                      backgroundColor: isRow2Text
+                        ? hexToRgba(color, row2BgAlpha)
+                        : color,
+                      left: x,
+                      top: topStyle,
+                      width,
+                      height,
+                      borderRadius: radius,
+                      zIndex: isRow2Text || isRow3Button ? 10 : zIndexStyle,
+                      opacity: rowStage !== undefined ? local : local * fade,
+                      transform: `translate(-50%, -50%) scale(${0.2 + local * 0.8})`,
+                      boxShadow: isRow3Button
+                        ? `0px 2px 1px rgba(0, 0, 0, ${0.25 * morphT})`
+                        : isRow2Text
+                          ? `inset 0 0 0 1px rgba(255, 255, 255, ${0.1 * row2BgAlpha})`
+                          : GREYSCALE_STROKE_COLORS.includes(color)
+                            ? `0 0 0 1px rgba(255, 255, 255, ${0.1 * (1 - morphT)}), inset 0 1px 1px rgba(255, 255, 255, ${0.08 * morphT})`
+                            : undefined,
+                    }}
+                  >
+                    {isRow3Button && (
+                      <ButtonLabel
+                        opacity={buttonTextT}
+                        text="Tertiary"
+                        color="#D4D8DE"
+                      />
+                    )}
+                    {isRow2Text && (
+                      <ColorLabel
+                        text={ROW2_LABELS[slotIndexFromX(rowTargetX[color])]}
+                        color={color}
+                      />
+                    )}
+                  </span>
+                  {isRow2Text && (
+                    <span
+                      className="absolute flex items-center justify-center overflow-hidden"
+                      style={{
+                        backgroundColor: hexToRgba(color, row2BgAlpha),
+                        left: x,
+                        top: topStyle + STACK_GAP_Y * textDupT,
+                        width,
+                        height,
+                        borderRadius: radius,
+                        zIndex: 10,
+                        opacity: rowStage !== undefined ? local : local * fade,
+                        transform: `translate(-50%, -50%) scale(${0.2 + local * 0.8})`,
+                        boxShadow: `inset 0 0 0 1px rgba(255, 255, 255, ${0.1 * row2BgAlpha})`,
+                      }}
+                    >
+                      <ColorLabel
+                        text={ROW2_LABELS[slotIndexFromX(rowTargetX[color])]}
+                        color={color}
+                      />
+                    </span>
+                  )}
+                  {ROW2_LAST_DUP_COLORS.includes(color) && (
+                    <span
+                      className="absolute flex items-center justify-center overflow-hidden"
+                      style={{
+                        backgroundColor: hexToRgba(color, row2BgAlpha),
+                        left: x,
+                        top: topStyle + STACK_GAP_Y * (textDupT + textDupT2),
+                        width,
+                        height,
+                        borderRadius: radius,
+                        zIndex: 10,
+                        opacity: rowStage !== undefined ? local : local * fade,
+                        transform: `translate(-50%, -50%) scale(${0.2 + local * 0.8})`,
+                        boxShadow: `inset 0 0 0 1px rgba(255, 255, 255, ${0.1 * row2BgAlpha})`,
+                      }}
+                    >
+                      <ColorLabel
+                        text={ROW2_LABELS[slotIndexFromX(rowTargetX[color])]}
+                        color={color}
+                      />
+                    </span>
+                  )}
+                  {isRow3Button && (
+                    <span
+                      className="absolute flex items-center justify-center overflow-hidden"
+                      style={{
+                        backgroundColor: color,
+                        left: x,
+                        top: topStyle + DUPLICATE_GAP_Y * textDupT,
+                        width,
+                        height,
+                        borderRadius: radius,
+                        zIndex: 10,
+                        opacity: rowStage !== undefined ? local : local * fade,
+                        transform: `translate(-50%, -50%) scale(${0.2 + local * 0.8})`,
+                        boxShadow: `0px 2px 1px rgba(0, 0, 0, ${0.25 * morphT})`,
+                      }}
+                    >
+                      <ButtonLabel
+                        opacity={buttonTextT}
+                        text="Tertiary"
+                        color="#D4D8DE"
+                      />
+                    </span>
+                  )}
+                  {isRow3Button && (
+                    <span
+                      className="absolute flex items-center justify-center overflow-hidden"
+                      style={{
+                        backgroundColor: color,
+                        left: x,
+                        top: topStyle + DUPLICATE_GAP_Y * (textDupT + textDupT2),
+                        width,
+                        height,
+                        borderRadius: radius,
+                        zIndex: 10,
+                        opacity: rowStage !== undefined ? local : local * fade,
+                        transform: `translate(-50%, -50%) scale(${0.2 + local * 0.8})`,
+                        boxShadow: `0px 2px 1px rgba(0, 0, 0, ${0.25 * morphT})`,
+                      }}
+                    >
+                      <ButtonLabel
+                        opacity={buttonTextT}
+                        text="Tertiary"
+                        color="#D4D8DE"
+                      />
+                    </span>
+                  )}
+                  {duplicate && (
+                    <span
+                      className="absolute"
+                      style={{
+                        backgroundColor: color,
+                        left: duplicate.x,
+                        top: duplicate.top,
+                        width: duplicate.width,
+                        height: duplicate.height,
+                        borderRadius: radius,
+                        zIndex: duplicate.zIndex,
+                        opacity: local,
+                        transform: `translate(-50%, -50%) scale(${0.2 + local * 0.8})`,
+                        boxShadow: GREYSCALE_STROKE_COLORS.includes(color)
                           ? `0 0 0 1px rgba(255, 255, 255, ${0.1 * (1 - morphT)}), inset 0 1px 1px rgba(255, 255, 255, ${0.08 * morphT})`
                           : undefined,
-                  }}
-                >
-                  {isRow3Button && (
-                    <ButtonLabel
-                      opacity={buttonTextT}
-                      text="Tertiary"
-                      color="#D4D8DE"
+                      }}
                     />
                   )}
-                  {isRow2Text && (
-                    <ColorLabel
-                      text={ROW2_LABELS[slotIndexFromX(rowTargetX[color])]}
-                      color={color}
-                    />
-                  )}
-                </span>
+                </Fragment>
               );
             })}
 
@@ -867,7 +1393,7 @@ function App() {
                     width: morphed.width,
                     height: morphed.height,
                     borderRadius: morphed.radius,
-                    opacity: blueLeftLocal,
+                    opacity: blueLeftLocal * (1 - stackT),
                     transform: `translate(-50%, -50%) scale(${0.2 + blueLeftLocal * 0.8})`,
                     border: `1px solid ${hexToRgba(CHIP_STROKE_COLOR, morphT)}`,
                     boxShadow: `0px 2px 1px rgba(0, 0, 0, ${0.25 * morphT})`,
@@ -907,11 +1433,12 @@ function App() {
               let width = 24;
               let height = 24;
               let radius = 9999;
+              let topStyle = y;
               if (rowStage !== undefined) {
                 x = lerp(x, rowTargetX[color], rowStage);
                 y = lerp(y, rowTargetY[color], rowStage);
                 const morphed = isRow3Button
-                  ? morphRow3(x, slotIndexFromX(rowTargetX[color]), morphT)
+                  ? morphRow3(x, slotIndexFromX(rowTargetX[color]), morphT, stackT)
                   : morphShape(
                       x,
                       rowTargetY[color],
@@ -922,30 +1449,73 @@ function App() {
                 width = morphed.width;
                 height = morphed.height;
                 radius = morphed.radius;
+                topStyle = isRow3Button
+                  ? row3StackTop(y, height, stackT)
+                  : y + (height - 24) / 2;
               }
 
               return (
-                <span
-                  key={color}
-                  className={`absolute${isRow3Button ? ' flex items-center justify-center overflow-hidden' : ''}`}
-                  style={{
-                    backgroundColor: color,
-                    left: x,
-                    top: y + (height - 24) / 2,
-                    width,
-                    height,
-                    borderRadius: radius,
-                    opacity: rowStage !== undefined ? local : local * fade,
-                    transform: `translate(-50%, -50%) scale(${0.2 + local * 0.8})`,
-                    boxShadow: isRow3Button
-                      ? `0px 2px 1px rgba(0, 0, 0, ${0.25 * morphT})`
-                      : undefined,
-                  }}
-                >
+                <Fragment key={color}>
+                  <span
+                    className={`absolute${isRow3Button ? ' flex items-center justify-center overflow-hidden' : ''}`}
+                    style={{
+                      backgroundColor: color,
+                      left: x,
+                      top: topStyle,
+                      width,
+                      height,
+                      borderRadius: radius,
+                      opacity: rowStage !== undefined ? local : local * fade,
+                      transform: `translate(-50%, -50%) scale(${0.2 + local * 0.8})`,
+                      boxShadow: isRow3Button
+                        ? `0px 2px 1px rgba(0, 0, 0, ${0.25 * morphT})`
+                        : undefined,
+                      zIndex: isRow3Button ? 10 : undefined,
+                    }}
+                  >
+                    {isRow3Button && (
+                      <ButtonLabel opacity={buttonTextT} text="Secondary" />
+                    )}
+                  </span>
                   {isRow3Button && (
-                    <ButtonLabel opacity={buttonTextT} text="Secondary" />
+                    <span
+                      className="absolute flex items-center justify-center overflow-hidden"
+                      style={{
+                        backgroundColor: color,
+                        left: x,
+                        top: topStyle + DUPLICATE_GAP_Y * textDupT,
+                        width,
+                        height,
+                        borderRadius: radius,
+                        zIndex: 10,
+                        opacity: rowStage !== undefined ? local : local * fade,
+                        transform: `translate(-50%, -50%) scale(${0.2 + local * 0.8})`,
+                        boxShadow: `0px 2px 1px rgba(0, 0, 0, ${0.25 * morphT})`,
+                      }}
+                    >
+                      <ButtonLabel opacity={buttonTextT} text="Secondary" />
+                    </span>
                   )}
-                </span>
+                  {isRow3Button && (
+                    <span
+                      className="absolute flex items-center justify-center overflow-hidden"
+                      style={{
+                        backgroundColor: color,
+                        left: x,
+                        top: topStyle + DUPLICATE_GAP_Y * (textDupT + textDupT2),
+                        width,
+                        height,
+                        borderRadius: radius,
+                        zIndex: 10,
+                        opacity: rowStage !== undefined ? local : local * fade,
+                        transform: `translate(-50%, -50%) scale(${0.2 + local * 0.8})`,
+                        boxShadow: `0px 2px 1px rgba(0, 0, 0, ${0.25 * morphT})`,
+                      }}
+                    >
+                      <ButtonLabel opacity={buttonTextT} text="Secondary" />
+                    </span>
+                  )}
+                </Fragment>
               );
             })}
 
@@ -969,7 +1539,7 @@ function App() {
                     width: morphed.width,
                     height: morphed.height,
                     borderRadius: morphed.radius,
-                    opacity: purpleLocal,
+                    opacity: purpleLocal * (1 - stackT),
                     transform: `translate(-50%, -50%) scale(${0.2 + purpleLocal * 0.8})`,
                   }}
                 >
@@ -1034,7 +1604,7 @@ function App() {
                     width: morphed.width,
                     height: morphed.height,
                     borderRadius: morphed.radius,
-                    opacity: greenLocal,
+                    opacity: greenLocal * (1 - stackT),
                     transform: `translate(-50%, -50%) scale(${0.2 + greenLocal * 0.8})`,
                   }}
                 >
@@ -1062,7 +1632,7 @@ function App() {
                     width: morphed.width,
                     height: morphed.height,
                     borderRadius: morphed.radius,
-                    opacity: redLocal,
+                    opacity: redLocal * (1 - stackT),
                     transform: `translate(-50%, -50%) scale(${0.2 + redLocal * 0.8})`,
                   }}
                 >
@@ -1084,27 +1654,72 @@ function App() {
               const local = clamp01((spawnT - spawnThreshold) / 0.05);
               const baseX = lerp(dupSpawnX, NEW_ROW3_X2, stageRow3);
               const baseY = lerp(ROW_Y, ROW3_Y, stageRow3);
-              const morphed = morphRow3(baseX, 3, morphT);
+              const morphed = morphRow3(baseX, 3, morphT, stackT);
+              const disabledTop = row3StackTop(baseY, morphed.height, stackT);
               return (
-                <span
-                  className="absolute flex items-center justify-center overflow-hidden"
-                  style={{
-                    backgroundColor: '#333A42',
-                    left: morphed.x,
-                    top: baseY + (morphed.height - 24) / 2,
-                    width: morphed.width,
-                    height: morphed.height,
-                    borderRadius: morphed.radius,
-                    opacity: local,
-                    transform: `translate(-50%, -50%) scale(${0.2 + local * 0.8})`,
-                  }}
-                >
-                  <ButtonLabel
-                    opacity={buttonTextT}
-                    text="Disabled"
-                    color="#545F6D"
-                  />
-                </span>
+                <Fragment>
+                  <span
+                    className="absolute flex items-center justify-center overflow-hidden"
+                    style={{
+                      backgroundColor: '#333A42',
+                      left: morphed.x,
+                      top: disabledTop,
+                      width: morphed.width,
+                      height: morphed.height,
+                      borderRadius: morphed.radius,
+                      opacity: local,
+                      transform: `translate(-50%, -50%) scale(${0.2 + local * 0.8})`,
+                      zIndex: 10,
+                    }}
+                  >
+                    <ButtonLabel
+                      opacity={buttonTextT}
+                      text="Disabled"
+                      color="#545F6D"
+                    />
+                  </span>
+                  <span
+                    className="absolute flex items-center justify-center overflow-hidden"
+                    style={{
+                      backgroundColor: '#333A42',
+                      left: morphed.x,
+                      top: disabledTop + DUPLICATE_GAP_Y * textDupT,
+                      width: morphed.width,
+                      height: morphed.height,
+                      borderRadius: morphed.radius,
+                      opacity: local,
+                      transform: `translate(-50%, -50%) scale(${0.2 + local * 0.8})`,
+                      zIndex: 10,
+                    }}
+                  >
+                    <ButtonLabel
+                      opacity={buttonTextT}
+                      text="Disabled"
+                      color="#545F6D"
+                    />
+                  </span>
+                  <span
+                    className="absolute flex items-center justify-center overflow-hidden"
+                    style={{
+                      backgroundColor: '#333A42',
+                      left: morphed.x,
+                      top: disabledTop + DUPLICATE_GAP_Y * (textDupT + textDupT2),
+                      width: morphed.width,
+                      height: morphed.height,
+                      borderRadius: morphed.radius,
+                      opacity: local,
+                      transform: `translate(-50%, -50%) scale(${0.2 + local * 0.8})`,
+                      border: `1px solid ${hexToRgba('#545F6D', local * textDupT2)}`,
+                      zIndex: 10,
+                    }}
+                  >
+                    <ButtonLabel
+                      opacity={buttonTextT}
+                      text="Disabled"
+                      color="#545F6D"
+                    />
+                  </span>
+                </Fragment>
               );
             })()}
 
@@ -1142,7 +1757,7 @@ function App() {
                   style={{
                     left: LABEL_X,
                     top: rowLabelY,
-                    opacity: rowStage,
+                    opacity: rowStage * (1 - stackT),
                     transform: 'translateY(-50%)',
                   }}
                 >
@@ -1150,6 +1765,47 @@ function App() {
                 </span>
               );
             })}
+
+            {/* three words spawn in underneath the stacked groups, one at a
+                time, then a green checkmark spawns to the right of each one
+                (one at a time) as its text turns to match */}
+            {['Contrast', 'Color blindness', 'SEO'].map((word, i) => {
+              const local = [word1Local, word2Local, word3Local][i];
+              const checkLocal = [check1Local, check2Local, check3Local][i];
+              const wordTop = 470 + i * 36;
+              const wordWidth = estimateTextWidth(word, 24);
+              return (
+                <Fragment key={word}>
+                  <span
+                    className="absolute font-medium whitespace-nowrap"
+                    style={{
+                      left: LABEL_X,
+                      top: wordTop,
+                      fontFamily: 'Inter, sans-serif',
+                      fontSize: 24,
+                      color: lerpColor('#FFFFFF', CHECK_GREEN, checkLocal),
+                      opacity: local,
+                      transform: `translateY(-50%) translateY(${(1 - local) * 12}px)`,
+                    }}
+                  >
+                    {word}
+                  </span>
+                  <span
+                    className="absolute"
+                    style={{
+                      left: LABEL_X + wordWidth + 16 + WARNING_ICON_SIZE / 2,
+                      top: wordTop,
+                      transform: 'translate(-50%, -50%)',
+                    }}
+                  >
+                    <SuccessIcon opacity={checkLocal} />
+                  </span>
+                </Fragment>
+              );
+            })}
+
+            {/* DEBUG GRID — toggle SHOW_DEBUG_GRID above to bring this back */}
+            {SHOW_DEBUG_GRID && <DebugGrid width={460} height={560} />}
           </div>
         </div>
 
