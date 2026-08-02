@@ -945,29 +945,23 @@ function App() {
   const check2Local = clamp01((checksT - 1 / 3) / (1 / 3));
   const check3Local = clamp01((checksT - 2 / 3) / (1 / 3));
 
-  // outro: everything scrolls up and fades out together, then the new
-  // illustration fades in — only once the outgoing text is mostly gone,
-  // rather than crossfading with it the whole time
+  // outro, split into two back-to-back (not overlapping) halves of outroT:
+  // first half, everything scrolls up and fully fades out; only once
+  // that's completely done does the second half start, and the new
+  // illustration scrolls/fades in. Splitting on outroT itself (rather than
+  // e.g. letting reveal start at some opacity threshold of the exit)
+  // guarantees zero overlap — the exit is fully finished, at 0 opacity,
+  // before the reveal's opacity ever leaves 0.
   const outroT = clamp01((progress - TIMELINE_SCALE) / (1 - TIMELINE_SCALE));
+  const EXIT_FRACTION = 0.5; // first half of outroT = exit, second = reveal
+  const exitT = clamp01(outroT / EXIT_FRACTION);
   const EXIT_LIFT = 400; // px the outgoing content rises before it's fully
   // faded out (was 200 — needed more travel before it disappears)
-  // illustration's own y position: travels from 600 (below the canvas) up
-  // to 80 (near the top). That's 520px — more than EXIT_LIFT's 400px — so
-  // to keep the same px-per-scroll pace as the outgoing content, it gets a
-  // proportionally longer scroll window instead of reusing outroT's 0->1
-  // range directly. Both windows still end together, right at progress 1.
-  const REVEAL_Y_START = 600;
-  const REVEAL_Y_END = 80;
-  const REVEAL_DISTANCE = REVEAL_Y_START - REVEAL_Y_END;
-  const EXIT_SPAN = 1 - TIMELINE_SCALE;
-  const EXIT_PACE = EXIT_LIFT / EXIT_SPAN; // px per unit of progress
-  const REVEAL_SPAN = REVEAL_DISTANCE / EXIT_PACE;
-  const revealPhaseT = clamp01((progress - (1 - REVEAL_SPAN)) / REVEAL_SPAN);
-  const revealY = lerp(REVEAL_Y_START, REVEAL_Y_END, revealPhaseT);
-  // waits until the outgoing content is almost fully faded (opacity down
-  // to ~0.15) before it starts appearing, instead of crossfading with it
-  // for a big chunk of the outro — much less overlap between the two
-  const revealT = clamp01((outroT - 0.85) / 0.15);
+  const revealLocalT = clamp01((outroT - EXIT_FRACTION) / (1 - EXIT_FRACTION));
+  const REVEAL_Y_START = 600; // illustration's own y position: travels from
+  const REVEAL_Y_END = 80; // 600 (below the canvas) up to 80 (near the top)
+  const revealY = lerp(REVEAL_Y_START, REVEAL_Y_END, revealLocalT);
+  const revealT = revealLocalT;
 
   // row 3's button label only shows up once the shape is mostly a rectangle
   const buttonTextT = clamp01((morphT - 0.6) / 0.4);
@@ -1009,8 +1003,8 @@ function App() {
               style={{
                 position: 'relative',
                 zIndex: 10,
-                transform: `translateY(${-outroT * EXIT_LIFT}px)`,
-                opacity: 1 - outroT,
+                transform: `translateY(${-exitT * EXIT_LIFT}px)`,
+                opacity: 1 - exitT,
               }}
             >
             <svg
