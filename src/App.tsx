@@ -871,8 +871,10 @@ function App() {
   // (all scaled by TIMELINE_SCALE)
   // 0.85 -> 1:    outro — everything scrolls up and fades out, the new
   //               illustration fades in underneath
-  const TIMELINE_SCALE = 0.93; // was 0.85 — shrinks the outro's scroll
-  // range from 15% to 7% of the total, so the exit + reveal happens faster
+  const TIMELINE_SCALE = 0.95; // was 0.85, then 0.93 — shrinks the outro's
+  // scroll range further (7% -> 5% of the total). The exit/reveal still
+  // travel the same pixel distances (EXIT_LIFT, REVEAL_Y_START/END below),
+  // just packed into less scroll, closing the gap between them.
   const appearEnd = 0.07 * TIMELINE_SCALE;
   const moveT = clamp01((progress - appearEnd) / (0.04 * TIMELINE_SCALE));
   const spawnT = clamp01((progress - 0.11 * TIMELINE_SCALE) / (0.1 * TIMELINE_SCALE));
