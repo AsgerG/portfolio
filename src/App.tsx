@@ -943,11 +943,12 @@ function App() {
   const check2Local = clamp01((checksT - 1 / 3) / (1 / 3));
   const check3Local = clamp01((checksT - 2 / 3) / (1 / 3));
 
-  // outro: everything scrolls up and fades out together, while the new
-  // illustration fades in underneath it partway through
+  // outro: everything scrolls up and fades out together, then the new
+  // illustration fades in — only once the outgoing text is mostly gone,
+  // rather than crossfading with it the whole time
   const outroT = clamp01((progress - TIMELINE_SCALE) / (1 - TIMELINE_SCALE));
   const OUTRO_LIFT = 200; // px the whole canvas rises as it vanishes
-  const revealT = clamp01((outroT - 0.3) / 0.7);
+  const revealT = clamp01((outroT - 0.6) / 0.4);
 
   // row 3's button label only shows up once the shape is mostly a rectangle
   const buttonTextT = clamp01((morphT - 0.6) / 0.4);
@@ -1879,12 +1880,14 @@ function App() {
             </div>
 
             {/* new illustration, revealed underneath as everything above
-                scrolls up and vanishes — it scrolls up into place too
-                (from OUTRO_LIFT below its resting spot to 0), rather than
-                just fading in statically, while still fading in via
-                revealT. PLACEHOLDER: swap in the real dashboard SVG here */}
+                scrolls up and vanishes — bottom-aligned (not centered) so
+                it sits in the same lower region the three words/checkmarks
+                occupied, instead of appearing higher up in the canvas. It
+                scrolls up into place too (from OUTRO_LIFT below its resting
+                spot to 0), and only starts fading in via revealT once that
+                text has mostly faded away. */}
             <div
-              className="absolute inset-0 flex items-center justify-center pointer-events-none"
+              className="absolute inset-0 flex items-end justify-center pointer-events-none"
               style={{
                 zIndex: 5,
                 opacity: revealT,
@@ -1938,7 +1941,7 @@ function App() {
                   rx={11}
                   fill="none"
                   stroke="#FFFFFF"
-                  strokeOpacity={0.3}
+                  strokeOpacity={0.15}
                   strokeWidth={1}
                   filter="url(#illustration-inner-glow)"
                 />
