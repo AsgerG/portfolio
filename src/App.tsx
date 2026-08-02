@@ -140,20 +140,20 @@ function DebugGrid({ width, height, step = 100 }: { width: number; height: numbe
   for (let y = 0; y <= height; y += step) yLines.push(y);
 
   return (
-    <div className="absolute inset-0 pointer-events-none z-0">
+    <div className="absolute inset-0 pointer-events-none z-0" style={{ opacity: 0.2 }}>
       {/* each line is explicitly sized to `width`/`height` (not top-0/
           bottom-0 percentages), so it renders correctly regardless of
           whatever this sits inside — no dependency on an ancestor's own
-          height */}
+          height. overall grid opacity is set once on the wrapper above. */}
       {xLines.map((x) => (
         <div key={`gx${x}`} className="absolute top-0" style={{ left: x, height }}>
           <div
             className="absolute top-0"
-            style={{ width: 1, height, backgroundColor: GRID_COLOR, opacity: 0.4 }}
+            style={{ width: 1, height, backgroundColor: GRID_COLOR }}
           />
           <span
             className="absolute top-0 left-1 text-[10px] leading-none font-mono"
-            style={{ color: GRID_COLOR, opacity: 0.8 }}
+            style={{ color: GRID_COLOR }}
           >
             {x}
           </span>
@@ -163,11 +163,11 @@ function DebugGrid({ width, height, step = 100 }: { width: number; height: numbe
         <div key={`gy${y}`} className="absolute left-0" style={{ top: y, width }}>
           <div
             className="absolute left-0"
-            style={{ width, height: 1, backgroundColor: GRID_COLOR, opacity: 0.4 }}
+            style={{ width, height: 1, backgroundColor: GRID_COLOR }}
           />
           <span
             className="absolute left-1 top-0 text-[10px] leading-none font-mono"
-            style={{ color: GRID_COLOR, opacity: 0.8 }}
+            style={{ color: GRID_COLOR }}
           >
             {y}
           </span>
