@@ -853,9 +853,10 @@ function App() {
 
   // the whole original sequence below is compressed into 0 -> 0.85 (every
   // threshold and span scaled by TIMELINE_SCALE, preserving how each stage
-  // hands off to the next), freeing up 0.85 -> 1 for the new outro stage:
-  // everything scrolls up and vanishes, revealing the new illustration
-  // underneath.
+  // hands off to the next), freeing up TIMELINE_SCALE -> 1 for the new
+  // outro stage: everything scrolls up and vanishes, revealing the new
+  // illustration underneath. TIMELINE_SCALE closer to 1 = a shorter,
+  // faster outro (less of the scroll devoted to it).
   //
   // 0    -> 0.07: circles appear next to the logo
   // 0.07 -> 0.11: logo fades out, circles slide into their grid layout
@@ -870,7 +871,8 @@ function App() {
   // (all scaled by TIMELINE_SCALE)
   // 0.85 -> 1:    outro — everything scrolls up and fades out, the new
   //               illustration fades in underneath
-  const TIMELINE_SCALE = 0.85;
+  const TIMELINE_SCALE = 0.93; // was 0.85 — shrinks the outro's scroll
+  // range from 15% to 7% of the total, so the exit + reveal happens faster
   const appearEnd = 0.07 * TIMELINE_SCALE;
   const moveT = clamp01((progress - appearEnd) / (0.04 * TIMELINE_SCALE));
   const spawnT = clamp01((progress - 0.11 * TIMELINE_SCALE) / (0.1 * TIMELINE_SCALE));
@@ -1891,7 +1893,7 @@ function App() {
               style={{
                 zIndex: 5,
                 opacity: revealT,
-                transform: `translateY(${(1 - outroT) * OUTRO_LIFT}px)`,
+                transform: `translateY(${(1 - outroT) * OUTRO_LIFT + 150}px)`,
               }}
             >
               <svg
