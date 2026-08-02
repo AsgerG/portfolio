@@ -58,16 +58,6 @@ function clamp01(t: number) {
   return Math.min(Math.max(t, 0), 1);
 }
 
-// eases a clamped 0-1 scroll-local value so motion isn't a straight line
-// with scroll position: slow start, fast middle, slow finish
-function easeInOutCubic(t: number) {
-  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-}
-
-function ease01(t: number) {
-  return easeInOutCubic(clamp01(t));
-}
-
 function hexToRgba(hex: string, alpha: number) {
   const r = parseInt(hex.slice(1, 3), 16);
   const g = parseInt(hex.slice(3, 5), 16);
@@ -206,7 +196,7 @@ const endPositions: Point[] = [
 
 // black, white, and blue all appear together
 function circleAppear(progress: number, windowEnd: number) {
-  const local = ease01(progress / windowEnd);
+  const local = clamp01(progress / windowEnd);
   return {
     opacity: local,
     scale: 0.2 + local * 0.8,
@@ -859,97 +849,94 @@ function App() {
   // (all scaled by TIMELINE_SCALE)
   // 0.85 -> 1:    outro — everything scrolls up and fades out, the new
   //               illustration fades in underneath
-  // every local progress value below runs through ease01 instead of plain
-  // clamp01, so each stage eases in and out instead of tracking scroll
-  // position 1:1 — see easeInOutCubic above
   const TIMELINE_SCALE = 0.85;
   const appearEnd = 0.07 * TIMELINE_SCALE;
-  const moveT = ease01((progress - appearEnd) / (0.04 * TIMELINE_SCALE));
-  const spawnT = ease01((progress - 0.11 * TIMELINE_SCALE) / (0.1 * TIMELINE_SCALE));
+  const moveT = clamp01((progress - appearEnd) / (0.04 * TIMELINE_SCALE));
+  const spawnT = clamp01((progress - 0.11 * TIMELINE_SCALE) / (0.1 * TIMELINE_SCALE));
   const svgOpacity = 1 - moveT;
 
   // "Neutrals" fades in once the new shades of grey start appearing,
   // not while black and white are just settling into the grid
   const neutralsLabelLocal = spawnT;
 
-  const stageD = ease01((progress - 0.21 * TIMELINE_SCALE) / (0.08 * TIMELINE_SCALE));
-  const blueMoveT = ease01(stageD / 0.35);
-  const blueLeftLocal = ease01((stageD - 0.15) / 0.35);
-  const blueRight1Local = ease01((stageD - 0.45) / 0.35);
-  const blueRight2Local = ease01((stageD - 0.65) / 0.35);
+  const stageD = clamp01((progress - 0.21 * TIMELINE_SCALE) / (0.08 * TIMELINE_SCALE));
+  const blueMoveT = clamp01(stageD / 0.35);
+  const blueLeftLocal = clamp01((stageD - 0.15) / 0.35);
+  const blueRight1Local = clamp01((stageD - 0.45) / 0.35);
+  const blueRight2Local = clamp01((stageD - 0.65) / 0.35);
 
   // "Brand" fades in as the blue row spawns
-  const brandLabelLocal = ease01(stageD / 0.6);
+  const brandLabelLocal = clamp01(stageD / 0.6);
 
   // the teal row and the purple circle unfold together: the row cascades
   // left to right, while purple starts at the same moment as the first dot
-  const stageRows = ease01((progress - 0.29 * TIMELINE_SCALE) / (0.1 * TIMELINE_SCALE));
-  const teal0Local = ease01(stageRows / 0.5);
-  const teal1Local = ease01((stageRows - 0.15) / 0.5);
-  const teal2Local = ease01((stageRows - 0.3) / 0.5);
-  const purpleLocal = ease01(stageRows / 0.5);
+  const stageRows = clamp01((progress - 0.29 * TIMELINE_SCALE) / (0.1 * TIMELINE_SCALE));
+  const teal0Local = clamp01(stageRows / 0.5);
+  const teal1Local = clamp01((stageRows - 0.15) / 0.5);
+  const teal2Local = clamp01((stageRows - 0.3) / 0.5);
+  const purpleLocal = clamp01(stageRows / 0.5);
 
   // "Analogous" fades in as the teal row and purple circle spawn
-  const analogousLabelLocal = ease01(stageRows / 0.5);
+  const analogousLabelLocal = clamp01(stageRows / 0.5);
 
   // green and red spawn in together
-  const stageSignal = ease01((progress - 0.39 * TIMELINE_SCALE) / (0.11 * TIMELINE_SCALE));
-  const greenLocal = ease01(stageSignal / 0.6);
-  const redLocal = ease01(stageSignal / 0.6);
+  const stageSignal = clamp01((progress - 0.39 * TIMELINE_SCALE) / (0.11 * TIMELINE_SCALE));
+  const greenLocal = clamp01(stageSignal / 0.6);
+  const redLocal = clamp01(stageSignal / 0.6);
 
   // "Signal" fades in as green and red spawn
-  const signalLabelLocal = ease01(stageSignal / 0.6);
+  const signalLabelLocal = clamp01(stageSignal / 0.6);
 
   // all five rows form together, then every claimed circle morphs into
   // its row's rectangular shape
-  const stageRowAll = ease01((progress - 0.5 * TIMELINE_SCALE) / (0.2 * TIMELINE_SCALE));
+  const stageRowAll = clamp01((progress - 0.5 * TIMELINE_SCALE) / (0.2 * TIMELINE_SCALE));
   const stageRow1 = stageRowAll;
   const stageRow2 = stageRowAll;
   const stageRow3 = stageRowAll;
   const stageRow4 = stageRowAll;
   const stageRow5 = stageRowAll;
-  const morphT = ease01((progress - 0.7 * TIMELINE_SCALE) / (0.15 * TIMELINE_SCALE));
+  const morphT = clamp01((progress - 0.7 * TIMELINE_SCALE) / (0.15 * TIMELINE_SCALE));
 
   // row 1's swatches restack into overlapping cards, row 2's text frames
   // onto the first card, and row 3's buttons frame onto the duplicate stack
-  const stackT = ease01((progress - 0.85 * TIMELINE_SCALE) / (0.04 * TIMELINE_SCALE));
+  const stackT = clamp01((progress - 0.85 * TIMELINE_SCALE) / (0.04 * TIMELINE_SCALE));
 
   // only once that initial move settles does row 2's text duplicate and
   // the copy shift down to sit framed against the stack's second card
-  const textDupT = ease01((progress - 0.89 * TIMELINE_SCALE) / (0.03 * TIMELINE_SCALE));
+  const textDupT = clamp01((progress - 0.89 * TIMELINE_SCALE) / (0.03 * TIMELINE_SCALE));
 
   // then, once that second copy settles, it duplicates again and the new
   // copy shifts down another 43px to sit framed against the third card
-  const textDupT2 = ease01((progress - 0.92 * TIMELINE_SCALE) / (0.03 * TIMELINE_SCALE));
+  const textDupT2 = clamp01((progress - 0.92 * TIMELINE_SCALE) / (0.03 * TIMELINE_SCALE));
 
   // then, three words spawn in underneath the stacked groups, one at a time
-  const wordsT = ease01((progress - 0.95 * TIMELINE_SCALE) / (0.025 * TIMELINE_SCALE));
-  const word1Local = ease01(wordsT / (1 / 3));
-  const word2Local = ease01((wordsT - 1 / 3) / (1 / 3));
-  const word3Local = ease01((wordsT - 2 / 3) / (1 / 3));
+  const wordsT = clamp01((progress - 0.95 * TIMELINE_SCALE) / (0.025 * TIMELINE_SCALE));
+  const word1Local = clamp01(wordsT / (1 / 3));
+  const word2Local = clamp01((wordsT - 1 / 3) / (1 / 3));
+  const word3Local = clamp01((wordsT - 2 / 3) / (1 / 3));
 
   // finally, once those words have all spawned, a green checkmark appears
   // to the left of each one, one at a time, and its text turns to match
-  const checksT = ease01((progress - 0.975 * TIMELINE_SCALE) / (0.025 * TIMELINE_SCALE));
-  const check1Local = ease01(checksT / (1 / 3));
-  const check2Local = ease01((checksT - 1 / 3) / (1 / 3));
-  const check3Local = ease01((checksT - 2 / 3) / (1 / 3));
+  const checksT = clamp01((progress - 0.975 * TIMELINE_SCALE) / (0.025 * TIMELINE_SCALE));
+  const check1Local = clamp01(checksT / (1 / 3));
+  const check2Local = clamp01((checksT - 1 / 3) / (1 / 3));
+  const check3Local = clamp01((checksT - 2 / 3) / (1 / 3));
 
   // outro: everything scrolls up and fades out together, while the new
   // illustration fades in underneath it partway through
-  const outroT = ease01((progress - TIMELINE_SCALE) / (1 - TIMELINE_SCALE));
+  const outroT = clamp01((progress - TIMELINE_SCALE) / (1 - TIMELINE_SCALE));
   const OUTRO_LIFT = 200; // px the whole canvas rises as it vanishes
-  const revealT = ease01((outroT - 0.3) / 0.7);
+  const revealT = clamp01((outroT - 0.3) / 0.7);
 
   // row 3's button label only shows up once the shape is mostly a rectangle
-  const buttonTextT = ease01((morphT - 0.6) / 0.4);
+  const buttonTextT = clamp01((morphT - 0.6) / 0.4);
 
   // row 2's box backgrounds fade away on the same schedule, revealing the
   // colour-matched label underneath
-  const row2BgAlpha = 1 - ease01((morphT - 0.6) / 0.4);
+  const row2BgAlpha = 1 - clamp01((morphT - 0.6) / 0.4);
 
   // everything not claimed by a row fades away early in that sequence
-  const fade = 1 - ease01((progress - 0.5 * TIMELINE_SCALE) / (0.15 * TIMELINE_SCALE));
+  const fade = 1 - clamp01((progress - 0.5 * TIMELINE_SCALE) / (0.15 * TIMELINE_SCALE));
 
   const rowStageByColor: Record<string, number> = {
     '#121212': stageRow1,
@@ -1231,7 +1218,7 @@ function App() {
               const spawnThreshold = clamp01(
                 (x - WHITE_START_X) / (WHITE_END_X - WHITE_START_X),
               );
-              const local = ease01((spawnT - spawnThreshold) / 0.05);
+              const local = clamp01((spawnT - spawnThreshold) / 0.05);
 
               const rowStage = rowStageByColor[color];
               const isRow3Button = ROW3_BUTTON_COLORS.includes(color);
@@ -1708,7 +1695,7 @@ function App() {
               const spawnThreshold = clamp01(
                 (dupSpawnX - WHITE_START_X) / (WHITE_END_X - WHITE_START_X),
               );
-              const local = ease01((spawnT - spawnThreshold) / 0.05);
+              const local = clamp01((spawnT - spawnThreshold) / 0.05);
               const baseX = lerp(dupSpawnX, NEW_ROW3_X2, stageRow3);
               const baseY = lerp(ROW_Y, ROW3_Y, stageRow3);
               const morphed = morphRow3(baseX, 3, morphT, stackT);
