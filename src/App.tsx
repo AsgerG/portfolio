@@ -131,7 +131,7 @@ function estimateTextWidth(text: string, fontSize: number) {
 // a sizing reference. It's absolutely positioned and pointer-events-none,
 // so it never affects layout or interaction, and isn't part of the
 // animation itself — nothing here reads scroll progress.
-const SHOW_DEBUG_GRID = false;
+const SHOW_DEBUG_GRID = true;
 function DebugGrid({ width, height, step = 100 }: { width: number; height: number; step?: number }) {
   const xLines: number[] = [];
   for (let x = 0; x <= width; x += step) xLines.push(x);
@@ -956,6 +956,11 @@ function App() {
 
   return (
     <div className="bg-[#15181D]">
+      {/* live scroll-progress readout, fixed to the viewport, for lining
+          up which stage of the timeline we're talking about while polishing */}
+      <div className="fixed top-4 left-4 z-50 font-mono text-xs text-white/70 bg-black/50 px-2 py-1 rounded pointer-events-none">
+        {progress.toFixed(3)}
+      </div>
       <div ref={ref} className="grid grid-cols-2">
         <div className="sticky top-0 h-screen flex items-center justify-center">
           <div className="relative w-[460px] max-w-full h-[560px]">
@@ -1853,11 +1858,16 @@ function App() {
             </div>
 
             {/* new illustration, revealed underneath as everything above
-                scrolls up and vanishes — PLACEHOLDER: swap in the real
-                dashboard SVG here */}
+                scrolls up and vanishes — it scrolls up into place too
+                (from OUTRO_LIFT below its resting spot to 0), rather than
+                just fading in statically, while still fading in via
+                revealT. PLACEHOLDER: swap in the real dashboard SVG here */}
             <div
               className="absolute inset-0 flex items-center justify-center pointer-events-none"
-              style={{ opacity: revealT }}
+              style={{
+                opacity: revealT,
+                transform: `translateY(${(1 - outroT) * OUTRO_LIFT}px)`,
+              }}
             >
               <div className="w-full h-full rounded-2xl border border-dashed border-white/20 flex items-center justify-center text-white/40 text-sm">
                 illustration placeholder
