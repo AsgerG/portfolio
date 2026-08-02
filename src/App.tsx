@@ -951,8 +951,13 @@ function App() {
   const outroT = clamp01((progress - TIMELINE_SCALE) / (1 - TIMELINE_SCALE));
   const EXIT_LIFT = 400; // px the outgoing content rises before it's fully
   // faded out (was 200 — needed more travel before it disappears)
-  const REVEAL_LIFT = 200; // px the incoming illustration rises into place,
-  // kept independent of EXIT_LIFT so tuning one doesn't move the other
+  // illustration's own y position: travels from 550 down at the bottom of
+  // the canvas up to 150 near the top, over the same outroT 0->1 range (and
+  // the same 400px distance) as EXIT_LIFT above, so the two move at the
+  // same speed
+  const REVEAL_Y_START = 550;
+  const REVEAL_Y_END = 150;
+  const revealY = lerp(REVEAL_Y_START, REVEAL_Y_END, outroT);
   const revealT = clamp01((outroT - 0.6) / 0.4);
 
   // row 3's button label only shows up once the shape is mostly a rectangle
@@ -1885,18 +1890,19 @@ function App() {
             </div>
 
             {/* new illustration, revealed underneath as everything above
-                scrolls up and vanishes — bottom-aligned (not centered) so
-                it sits in the same lower region the three words/checkmarks
-                occupied, instead of appearing higher up in the canvas. It
-                scrolls up into place too (from REVEAL_LIFT below its
-                resting spot to 0, plus a flat +150px), and only starts
-                fading in via revealT once that text has mostly faded away. */}
+                scrolls up and vanishes — positioned by explicit top (not
+                flex alignment) so its travel is a direct, readable
+                REVEAL_Y_START -> REVEAL_Y_END lerp on revealY above, and
+                only starts fading in via revealT once the outgoing text
+                has mostly faded away. */}
             <div
-              className="absolute inset-0 flex items-end justify-center pointer-events-none"
+              className="absolute pointer-events-none"
               style={{
                 zIndex: 5,
                 opacity: revealT,
-                transform: `translateY(${(1 - outroT) * REVEAL_LIFT + 150}px)`,
+                left: '50%',
+                top: revealY,
+                transform: 'translateX(-50%)',
               }}
             >
               <svg
