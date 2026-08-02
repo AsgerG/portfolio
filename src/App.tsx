@@ -947,24 +947,25 @@ function App() {
   const check2Local = clamp01((checksT - 1 / 3) / (1 / 3));
   const check3Local = clamp01((checksT - 2 / 3) / (1 / 3));
 
-  // outro: the SVG starts moving right at the top of the outro (progress =
-  // TIMELINE_SCALE = 0.95), the same moment the exit starts — but it's
-  // still invisible then (opacity 0), so there's no visible overlap. Only
-  // once the exit has fully finished (first half of outroT) does the SVG's
-  // own opacity leave 0, in the second half — it's already in position
-  // (or close to it) by the time it's actually visible.
+  // pre-reveal: the SVG spawns in (opacity 0 -> 1) underneath everything
+  // that's still on screen, finishing right as the outro below begins —
+  // so by the time the foreground starts scrolling up and vanishing, the
+  // illustration is already fully visible behind it, and the vanish just
+  // reveals more of it (rather than the SVG fading in during/after the
+  // vanish, which is what wasn't reading clearly before).
+  const PRE_REVEAL_SPAN = 0.05; // 5% of progress, ending at TIMELINE_SCALE
+  const revealT = clamp01(
+    (progress - (TIMELINE_SCALE - PRE_REVEAL_SPAN)) / PRE_REVEAL_SPAN,
+  );
+
+  // outro: now that the SVG has spawned in behind it, the foreground
+  // scrolls up and fades out, uncovering more of the illustration as it goes
   const outroT = clamp01((progress - TIMELINE_SCALE) / (1 - TIMELINE_SCALE));
-  const EXIT_FRACTION = 0.3; // was 0.5 — exit now finishes sooner (30% into
-  // the outro instead of 50%), so the SVG's opacity gate opens earlier too
-  const exitT = clamp01(outroT / EXIT_FRACTION);
   const EXIT_LIFT = 400; // px the outgoing content rises before it's fully
   // faded out (was 200 — needed more travel before it disappears)
-  const revealLocalT = clamp01((outroT - EXIT_FRACTION) / (1 - EXIT_FRACTION));
   const REVEAL_Y_START = 600; // illustration's own y position: travels from
   const REVEAL_Y_END = 80; // 600 (below the canvas) up to 80 (near the top)
-  const revealY = lerp(REVEAL_Y_START, REVEAL_Y_END, outroT); // moves across
-  // the whole outro (starting at progress 0.95), not just the second half
-  const revealT = revealLocalT;
+  const revealY = lerp(REVEAL_Y_START, REVEAL_Y_END, outroT);
 
   // row 3's button label only shows up once the shape is mostly a rectangle
   const buttonTextT = clamp01((morphT - 0.6) / 0.4);
@@ -1006,8 +1007,8 @@ function App() {
               style={{
                 position: 'relative',
                 zIndex: 10,
-                transform: `translateY(${-exitT * EXIT_LIFT}px)`,
-                opacity: 1 - exitT,
+                transform: `translateY(${-outroT * EXIT_LIFT}px)`,
+                opacity: 1 - outroT,
               }}
             >
             <svg
