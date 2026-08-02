@@ -139,19 +139,19 @@ function DebugGrid({ width, height, step = 100 }: { width: number; height: numbe
   for (let y = 0; y <= height; y += step) yLines.push(y);
 
   return (
-    <div className="absolute inset-0 pointer-events-none z-50">
+    <div className="absolute inset-0 pointer-events-none z-0">
       {xLines.map((x) => (
         <div key={`gx${x}`} className="absolute top-0 bottom-0" style={{ left: x }}>
-          <div className="absolute top-0 bottom-0 border-l border-red-500/40" />
-          <span className="absolute top-0 left-1 text-[10px] leading-none text-red-400/80 font-mono">
+          <div className="absolute top-0 bottom-0 border-l border-[#9FD7F3]/40" />
+          <span className="absolute top-0 left-1 text-[10px] leading-none text-[#9FD7F3]/80 font-mono">
             {x}
           </span>
         </div>
       ))}
       {yLines.map((y) => (
         <div key={`gy${y}`} className="absolute left-0 right-0" style={{ top: y }}>
-          <div className="absolute left-0 right-0 border-t border-red-500/40" />
-          <span className="absolute left-1 top-0 text-[10px] leading-none text-red-400/80 font-mono">
+          <div className="absolute left-0 right-0 border-t border-[#9FD7F3]/40" />
+          <span className="absolute left-1 top-0 text-[10px] leading-none text-[#9FD7F3]/80 font-mono">
             {y}
           </span>
         </div>
@@ -966,6 +966,8 @@ function App() {
           <div className="relative w-[460px] max-w-full h-[560px]">
             <div
               style={{
+                position: 'relative',
+                zIndex: 10,
                 transform: `translateY(${-outroT * OUTRO_LIFT}px)`,
                 opacity: 1 - outroT,
               }}
@@ -1853,8 +1855,6 @@ function App() {
               );
             })}
 
-            {/* DEBUG GRID — toggle SHOW_DEBUG_GRID above to bring this back */}
-            {SHOW_DEBUG_GRID && <DebugGrid width={460} height={560} />}
             </div>
 
             {/* new illustration, revealed underneath as everything above
@@ -1865,6 +1865,7 @@ function App() {
             <div
               className="absolute inset-0 flex items-center justify-center pointer-events-none"
               style={{
+                zIndex: 5,
                 opacity: revealT,
                 transform: `translateY(${(1 - outroT) * OUTRO_LIFT}px)`,
               }}
@@ -1873,6 +1874,12 @@ function App() {
                 illustration placeholder
               </div>
             </div>
+
+            {/* guiding grid — sits behind the animation (z-0, vs the
+                animation's z-10/z-5) so it's a reference, not an obstruction,
+                and lives outside the outro-transform wrapper so it stays put
+                (doesn't scroll up or fade with the rest at the end) */}
+            {SHOW_DEBUG_GRID && <DebugGrid width={460} height={560} />}
           </div>
         </div>
 
