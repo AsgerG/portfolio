@@ -947,23 +947,15 @@ function App() {
   const check2Local = clamp01((checksT - 1 / 3) / (1 / 3));
   const check3Local = clamp01((checksT - 2 / 3) / (1 / 3));
 
-  // pre-reveal: the SVG spawns in (opacity 0 -> 1) underneath everything
-  // that's still on screen, finishing right as the outro below begins —
-  // so by the time the foreground starts scrolling up and vanishing, the
-  // illustration is already fully visible behind it, and the vanish just
-  // reveals more of it (rather than the SVG fading in during/after the
-  // vanish, which is what wasn't reading clearly before).
-  const PRE_REVEAL_SPAN = 0.05; // 5% of progress, ending at TIMELINE_SCALE
-  const revealT = clamp01(
-    (progress - (TIMELINE_SCALE - PRE_REVEAL_SPAN)) / PRE_REVEAL_SPAN,
-  );
-
-  // outro: now that the SVG has spawned in behind it, the foreground
-  // scrolls up and fades out, uncovering more of the illustration as it goes
+  // outro: the SVG stays fully hidden (opacity 0) until it starts moving,
+  // then fades in over the same outroT range it moves in — so "hidden" and
+  // "start moving" happen at exactly the same instant, instead of fading
+  // in earlier while still sitting still.
   const outroT = clamp01((progress - TIMELINE_SCALE) / (1 - TIMELINE_SCALE));
   const REVEAL_Y_START = 600; // illustration's own y position: travels from
   const REVEAL_Y_END = 80; // 600 (below the canvas) up to 80 (near the top)
   const revealY = lerp(REVEAL_Y_START, REVEAL_Y_END, outroT);
+  const revealT = outroT;
   // outgoing content rises the same distance (520px) over the same outroT
   // range, so it moves at the same rate/speed as the SVG above (was 400px,
   // a slightly different — and thus mismatched — rate)
