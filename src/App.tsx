@@ -1897,6 +1897,10 @@ function App() {
                 viewBox="0 0 450 309"
                 fill="none"
                 xmlns="http://www.w3.org/2000/svg"
+                style={{
+                  boxShadow:
+                    '0px 4px 8px rgba(0, 0, 0, 0.3), inset 0px 0px 2px rgba(255, 255, 255, 0.05)',
+                }}
               >
                 <path fillRule="evenodd" clipRule="evenodd" d="M450 103.5H0V126H450V103.5Z" fill="#282D34"/>
                 <path d="M161 153C161 151.343 162.343 150 164 150H286C287.657 150 289 151.343 289 153V191.625V230.25C289 231.907 287.657 233.25 286 233.25H164C162.343 233.25 161 231.907 161 230.25V153Z" fill="#282D34"/>
