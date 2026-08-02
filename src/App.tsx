@@ -192,7 +192,11 @@ const startPositions: Point[] = [
 ];
 
 const ROW_Y = 90;
-const ROW_START_X = 90;
+// left edge of the row grid / stacked cards / labels (BOX_START_X below) —
+// everything in the rows-and-stacking phase of the animation is positioned
+// relative to this, so shifting it shifts virtually the whole sequence.
+// 12 here puts BOX_START_X (= ROW_START_X - 12) at 0.
+const ROW_START_X = 12;
 const ROW_SPACING = 26;
 const rowX = (i: number) => ROW_START_X + i * ROW_SPACING;
 
