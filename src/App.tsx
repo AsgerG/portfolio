@@ -960,9 +960,9 @@ function App() {
   const revealY = lerp(REVEAL_Y_START, REVEAL_Y_END, baseT);
   const revealT = baseT;
   const detailRevealT = clamp01((outroT - BASE_SVG_FRACTION) / (1 - BASE_SVG_FRACTION));
-  // outgoing content rises the same distance (520px) over the same outroT
-  // range, so it moves at the same rate/speed as the SVG above (was 400px,
-  // a slightly different — and thus mismatched — rate)
+  // outgoing content rises the same distance (520px) over the same baseT
+  // range as the base SVG above (both driven by baseT, not raw outroT),
+  // so the two stay synced/matched-rate through the whole exit
   const EXIT_LIFT = REVEAL_Y_START - REVEAL_Y_END;
 
   // row 3's button label only shows up once the shape is mostly a rectangle
@@ -1005,8 +1005,8 @@ function App() {
               style={{
                 position: 'relative',
                 zIndex: 10,
-                transform: `translateY(${-outroT * EXIT_LIFT}px)`,
-                opacity: 1 - outroT,
+                transform: `translateY(${-baseT * EXIT_LIFT}px)`,
+                opacity: 1 - baseT,
               }}
             >
             <svg
