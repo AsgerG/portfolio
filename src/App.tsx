@@ -947,15 +947,19 @@ function App() {
   const check2Local = clamp01((checksT - 1 / 3) / (1 / 3));
   const check3Local = clamp01((checksT - 2 / 3) / (1 / 3));
 
-  // outro: the SVG stays fully hidden (opacity 0) until it starts moving,
-  // then fades in over the same outroT range it moves in — so "hidden" and
-  // "start moving" happen at exactly the same instant, instead of fading
-  // in earlier while still sitting still.
+  // outro is split into two back-to-back parts of outroT: first the base
+  // SVG stays hidden until it starts moving, then moves + fades in
+  // together (baseT). Only once it's fully stopped and fully visible
+  // (baseT reaches 1) does the second, detailed SVG start its own
+  // fade-in (detailT) — it doesn't spawn a moment before that.
   const outroT = clamp01((progress - TIMELINE_SCALE) / (1 - TIMELINE_SCALE));
+  const BASE_SVG_FRACTION = 0.6; // first 60% of outroT = base SVG, rest = detail SVG
+  const baseT = clamp01(outroT / BASE_SVG_FRACTION);
   const REVEAL_Y_START = 600; // illustration's own y position: travels from
   const REVEAL_Y_END = 80; // 600 (below the canvas) up to 80 (near the top)
-  const revealY = lerp(REVEAL_Y_START, REVEAL_Y_END, outroT);
-  const revealT = outroT;
+  const revealY = lerp(REVEAL_Y_START, REVEAL_Y_END, baseT);
+  const revealT = baseT;
+  const detailRevealT = clamp01((outroT - BASE_SVG_FRACTION) / (1 - BASE_SVG_FRACTION));
   // outgoing content rises the same distance (520px) over the same outroT
   // range, so it moves at the same rate/speed as the SVG above (was 400px,
   // a slightly different — and thus mismatched — rate)
@@ -1961,15 +1965,23 @@ function App() {
 
               {/* second, more detailed SVG — same 450x309 size, absolutely
                   positioned at (0,0) of this same wrapper so it lands
-                  exactly on top of the base illustration above, sharing
-                  its position/opacity animation */}
+                  exactly on top of the base illustration above. It shares
+                  the wrapper's position, but has its own opacity
+                  (detailRevealT) that only starts leaving 0 once the base
+                  SVG has fully stopped moving and is fully visible. */}
               <svg
                 width="450"
                 height="309"
                 viewBox="0 0 450 309"
                 fill="none"
                 xmlns="http://www.w3.org/2000/svg"
-                style={{ position: 'absolute', top: 0, left: 0, zIndex: 1 }}
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  zIndex: 1,
+                  opacity: detailRevealT,
+                }}
               >
                 <g filter="url(#filter0_i_345_28259)">
                   <path fillRule="evenodd" clipRule="evenodd" d="M450 103.5H0V126H450V103.5Z" fill="#282D34"/>
