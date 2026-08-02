@@ -132,6 +132,7 @@ function estimateTextWidth(text: string, fontSize: number) {
 // so it never affects layout or interaction, and isn't part of the
 // animation itself — nothing here reads scroll progress.
 const SHOW_DEBUG_GRID = true;
+const GRID_COLOR = '#9FD7F3';
 function DebugGrid({ width, height, step = 100 }: { width: number; height: number; step?: number }) {
   const xLines: number[] = [];
   for (let x = 0; x <= width; x += step) xLines.push(x);
@@ -140,18 +141,34 @@ function DebugGrid({ width, height, step = 100 }: { width: number; height: numbe
 
   return (
     <div className="absolute inset-0 pointer-events-none z-0">
+      {/* each line is explicitly sized to `width`/`height` (not top-0/
+          bottom-0 percentages), so it renders correctly regardless of
+          whatever this sits inside — no dependency on an ancestor's own
+          height */}
       {xLines.map((x) => (
-        <div key={`gx${x}`} className="absolute top-0 bottom-0" style={{ left: x }}>
-          <div className="absolute top-0 bottom-0 border-l border-[#9FD7F3]/40" />
-          <span className="absolute top-0 left-1 text-[10px] leading-none text-[#9FD7F3]/80 font-mono">
+        <div key={`gx${x}`} className="absolute top-0" style={{ left: x, height }}>
+          <div
+            className="absolute top-0"
+            style={{ width: 1, height, backgroundColor: GRID_COLOR, opacity: 0.4 }}
+          />
+          <span
+            className="absolute top-0 left-1 text-[10px] leading-none font-mono"
+            style={{ color: GRID_COLOR, opacity: 0.8 }}
+          >
             {x}
           </span>
         </div>
       ))}
       {yLines.map((y) => (
-        <div key={`gy${y}`} className="absolute left-0 right-0" style={{ top: y }}>
-          <div className="absolute left-0 right-0 border-t border-[#9FD7F3]/40" />
-          <span className="absolute left-1 top-0 text-[10px] leading-none text-[#9FD7F3]/80 font-mono">
+        <div key={`gy${y}`} className="absolute left-0" style={{ top: y, width }}>
+          <div
+            className="absolute left-0"
+            style={{ width, height: 1, backgroundColor: GRID_COLOR, opacity: 0.4 }}
+          />
+          <span
+            className="absolute left-1 top-0 text-[10px] leading-none font-mono"
+            style={{ color: GRID_COLOR, opacity: 0.8 }}
+          >
             {y}
           </span>
         </div>
@@ -1887,6 +1904,12 @@ function App() {
           {paragraphs.map((text) => (
             <p key={text}>{text}</p>
           ))}
+          {/* trailing buffer: without this, the sticky canvas unsticks and
+              starts scrolling away the instant progress hits 1 (there's no
+              container height left to keep it pinned), cutting the outro
+              off right as it finishes. This holds progress at 1 for a bit
+              so the finished state — grid included — stays on screen. */}
+          <div className="h-[60vh]" aria-hidden />
         </div>
       </div>
     </div>
