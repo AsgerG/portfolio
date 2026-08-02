@@ -947,22 +947,22 @@ function App() {
   const check2Local = clamp01((checksT - 1 / 3) / (1 / 3));
   const check3Local = clamp01((checksT - 2 / 3) / (1 / 3));
 
-  // outro, split into two back-to-back (not overlapping) halves of outroT:
-  // first half, everything scrolls up and fully fades out; only once
-  // that's completely done does the second half start, and the new
-  // illustration scrolls/fades in. Splitting on outroT itself (rather than
-  // e.g. letting reveal start at some opacity threshold of the exit)
-  // guarantees zero overlap — the exit is fully finished, at 0 opacity,
-  // before the reveal's opacity ever leaves 0.
+  // outro: the SVG starts moving right at the top of the outro (progress =
+  // TIMELINE_SCALE = 0.95), the same moment the exit starts — but it's
+  // still invisible then (opacity 0), so there's no visible overlap. Only
+  // once the exit has fully finished (first half of outroT) does the SVG's
+  // own opacity leave 0, in the second half — it's already in position
+  // (or close to it) by the time it's actually visible.
   const outroT = clamp01((progress - TIMELINE_SCALE) / (1 - TIMELINE_SCALE));
-  const EXIT_FRACTION = 0.5; // first half of outroT = exit, second = reveal
+  const EXIT_FRACTION = 0.5; // first half of outroT = exit, second = reveal fade-in
   const exitT = clamp01(outroT / EXIT_FRACTION);
   const EXIT_LIFT = 400; // px the outgoing content rises before it's fully
   // faded out (was 200 — needed more travel before it disappears)
   const revealLocalT = clamp01((outroT - EXIT_FRACTION) / (1 - EXIT_FRACTION));
   const REVEAL_Y_START = 600; // illustration's own y position: travels from
   const REVEAL_Y_END = 80; // 600 (below the canvas) up to 80 (near the top)
-  const revealY = lerp(REVEAL_Y_START, REVEAL_Y_END, revealLocalT);
+  const revealY = lerp(REVEAL_Y_START, REVEAL_Y_END, outroT); // moves across
+  // the whole outro (starting at progress 0.95), not just the second half
   const revealT = revealLocalT;
 
   // row 3's button label only shows up once the shape is mostly a rectangle
