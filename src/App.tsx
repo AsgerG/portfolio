@@ -964,7 +964,10 @@ function App() {
   const REVEAL_SPAN = REVEAL_DISTANCE / EXIT_PACE;
   const revealPhaseT = clamp01((progress - (1 - REVEAL_SPAN)) / REVEAL_SPAN);
   const revealY = lerp(REVEAL_Y_START, REVEAL_Y_END, revealPhaseT);
-  const revealT = clamp01((outroT - 0.6) / 0.4);
+  // waits until the outgoing content is almost fully faded (opacity down
+  // to ~0.15) before it starts appearing, instead of crossfading with it
+  // for a big chunk of the outro — much less overlap between the two
+  const revealT = clamp01((outroT - 0.85) / 0.15);
 
   // row 3's button label only shows up once the shape is mostly a rectangle
   const buttonTextT = clamp01((morphT - 0.6) / 0.4);
