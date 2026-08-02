@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
 import Lenis from 'lenis';
+import sbcHomePage from './assets/sbc_home_page.png';
 
 // drives smooth/eased scrolling site-wide. Lenis animates the native scroll
 // position itself (window.scrollTo under the hood), so it still dispatches
@@ -947,19 +948,24 @@ function App() {
   const check2Local = clamp01((checksT - 1 / 3) / (1 / 3));
   const check3Local = clamp01((checksT - 2 / 3) / (1 / 3));
 
-  // outro is split into two back-to-back parts of outroT: first the base
+  // outro is split into three back-to-back parts of outroT: first the base
   // SVG stays hidden until it starts moving, then moves + fades in
-  // together (baseT). Only once it's fully stopped and fully visible
-  // (baseT reaches 1) does the second, detailed SVG start its own
-  // fade-in (detailT) — it doesn't spawn a moment before that.
+  // together (baseT). Only once it's fully stopped and fully visible does
+  // the detailed SVG start its own fade-in (detailRevealT). Only once
+  // *that's* fully visible does the home-page image start fading in on
+  // top of it (imageRevealT) — each stage waits for the previous one to
+  // completely finish before it spawns.
   const outroT = clamp01((progress - TIMELINE_SCALE) / (1 - TIMELINE_SCALE));
-  const BASE_SVG_FRACTION = 0.6; // first 60% of outroT = base SVG, rest = detail SVG
-  const baseT = clamp01(outroT / BASE_SVG_FRACTION);
+  const BASE_SVG_END = 0.4; // outroT 0    -> 0.4: base SVG
+  const DETAIL_SVG_END = 0.7; // outroT 0.4 -> 0.7: detail SVG
+  // outroT 0.7 -> 1: home-page image
+  const baseT = clamp01(outroT / BASE_SVG_END);
   const REVEAL_Y_START = 600; // illustration's own y position: travels from
   const REVEAL_Y_END = 80; // 600 (below the canvas) up to 80 (near the top)
   const revealY = lerp(REVEAL_Y_START, REVEAL_Y_END, baseT);
   const revealT = baseT;
-  const detailRevealT = clamp01((outroT - BASE_SVG_FRACTION) / (1 - BASE_SVG_FRACTION));
+  const detailRevealT = clamp01((outroT - BASE_SVG_END) / (DETAIL_SVG_END - BASE_SVG_END));
+  const imageRevealT = clamp01((outroT - DETAIL_SVG_END) / (1 - DETAIL_SVG_END));
   // outgoing content rises the same distance (520px) over the same baseT
   // range as the base SVG above (both driven by baseT, not raw outroT),
   // so the two stay synced/matched-rate through the whole exit
@@ -2042,6 +2048,24 @@ function App() {
                   </filter>
                 </defs>
               </svg>
+
+              {/* home-page screenshot — same 450px width, absolutely
+                  positioned on top of both SVGs above, waiting until the
+                  detail SVG is fully visible before it starts fading in */}
+              <img
+                src={sbcHomePage}
+                alt=""
+                width={450}
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: 450,
+                  height: 'auto',
+                  zIndex: 2,
+                  opacity: imageRevealT,
+                }}
+              />
             </div>
 
             {/* guiding grid — sits behind the animation (z-0, vs the
