@@ -1918,6 +1918,30 @@ function App() {
                 <path d="M450 18H0V103.5H450V18Z" fill="#1A1E23"/>
                 <path fillRule="evenodd" clipRule="evenodd" d="M33 135H417C418.657 135 420 136.343 420 138V144C420 145.657 418.657 147 417 147H33C31.3431 147 30 145.657 30 144V138C30 136.343 31.3431 135 33 135Z" fill="#282D34"/>
                 <path d="M33 150H155C156.657 150 158 151.343 158 153V230.25C158 231.907 156.657 233.25 155 233.25H33C31.3431 233.25 30 231.907 30 230.25V153C30 151.343 31.3431 150 33 150Z" fill="#282D34"/>
+                {/* inner shadow: same reason as the outer drop-shadow above
+                    — a CSS inset box-shadow follows the rectangular DOM box,
+                    not the drawn rounded-corner shape, so it'd bleed into
+                    the transparent corners again. Drawing it as real SVG
+                    geometry (a rounded rect just inside the shape's own
+                    boundary, softened with a small blur) keeps it clipped
+                    to the actual artwork. */}
+                <defs>
+                  <filter id="illustration-inner-glow" x="-20%" y="-20%" width="140%" height="140%">
+                    <feGaussianBlur stdDeviation="0.5" />
+                  </filter>
+                </defs>
+                <rect
+                  x={1}
+                  y={1}
+                  width={448}
+                  height={307}
+                  rx={11}
+                  fill="none"
+                  stroke="#FFFFFF"
+                  strokeOpacity={0.3}
+                  strokeWidth={1}
+                  filter="url(#illustration-inner-glow)"
+                />
               </svg>
             </div>
 
