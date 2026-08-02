@@ -1898,8 +1898,13 @@ function App() {
                 fill="none"
                 xmlns="http://www.w3.org/2000/svg"
                 style={{
-                  boxShadow:
-                    '0px 4px 8px rgba(0, 0, 0, 0.3), inset 0px 0px 2px rgba(255, 255, 255, 0.05)',
+                  // box-shadow follows the SVG's rectangular bounding box,
+                  // so it was showing up in the transparent corners around
+                  // the drawn (rounded-corner) shape. drop-shadow instead
+                  // follows the actual painted alpha, so it hugs the shape
+                  // itself. (no inset equivalent for filter, so that part
+                  // is dropped — it wasn't visible at 0.05 opacity anyway.)
+                  filter: 'drop-shadow(0px 4px 8px rgba(0, 0, 0, 0.3))',
                 }}
               >
                 <path fillRule="evenodd" clipRule="evenodd" d="M450 103.5H0V126H450V103.5Z" fill="#282D34"/>
