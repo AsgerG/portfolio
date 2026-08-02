@@ -954,7 +954,8 @@ function App() {
   // own opacity leave 0, in the second half — it's already in position
   // (or close to it) by the time it's actually visible.
   const outroT = clamp01((progress - TIMELINE_SCALE) / (1 - TIMELINE_SCALE));
-  const EXIT_FRACTION = 0.5; // first half of outroT = exit, second = reveal fade-in
+  const EXIT_FRACTION = 0.3; // was 0.5 — exit now finishes sooner (30% into
+  // the outro instead of 50%), so the SVG's opacity gate opens earlier too
   const exitT = clamp01(outroT / EXIT_FRACTION);
   const EXIT_LIFT = 400; // px the outgoing content rises before it's fully
   // faded out (was 200 — needed more travel before it disappears)
