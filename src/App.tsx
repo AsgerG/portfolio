@@ -951,13 +951,19 @@ function App() {
   const outroT = clamp01((progress - TIMELINE_SCALE) / (1 - TIMELINE_SCALE));
   const EXIT_LIFT = 400; // px the outgoing content rises before it's fully
   // faded out (was 200 — needed more travel before it disappears)
-  // illustration's own y position: travels from 550 down at the bottom of
-  // the canvas up to 150 near the top, over the same outroT 0->1 range (and
-  // the same 400px distance) as EXIT_LIFT above, so the two move at the
-  // same speed
-  const REVEAL_Y_START = 550;
-  const REVEAL_Y_END = 150;
-  const revealY = lerp(REVEAL_Y_START, REVEAL_Y_END, outroT);
+  // illustration's own y position: travels from 600 (below the canvas) up
+  // to 80 (near the top). That's 520px — more than EXIT_LIFT's 400px — so
+  // to keep the same px-per-scroll pace as the outgoing content, it gets a
+  // proportionally longer scroll window instead of reusing outroT's 0->1
+  // range directly. Both windows still end together, right at progress 1.
+  const REVEAL_Y_START = 600;
+  const REVEAL_Y_END = 80;
+  const REVEAL_DISTANCE = REVEAL_Y_START - REVEAL_Y_END;
+  const EXIT_SPAN = 1 - TIMELINE_SCALE;
+  const EXIT_PACE = EXIT_LIFT / EXIT_SPAN; // px per unit of progress
+  const REVEAL_SPAN = REVEAL_DISTANCE / EXIT_PACE;
+  const revealPhaseT = clamp01((progress - (1 - REVEAL_SPAN)) / REVEAL_SPAN);
+  const revealY = lerp(REVEAL_Y_START, REVEAL_Y_END, revealPhaseT);
   const revealT = clamp01((outroT - 0.6) / 0.4);
 
   // row 3's button label only shows up once the shape is mostly a rectangle
