@@ -1,4 +1,25 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
+import Lenis from 'lenis';
+
+// drives smooth/eased scrolling site-wide. Lenis animates the native scroll
+// position itself (window.scrollTo under the hood), so it still dispatches
+// regular 'scroll' events — useScrollProgress below needs no changes to
+// pick up the smoothed motion.
+function useLenis() {
+  useEffect(() => {
+    const lenis = new Lenis();
+    let rafId: number;
+    function raf(time: number) {
+      lenis.raf(time);
+      rafId = requestAnimationFrame(raf);
+    }
+    rafId = requestAnimationFrame(raf);
+    return () => {
+      cancelAnimationFrame(rafId);
+      lenis.destroy();
+    };
+  }, []);
+}
 
 function useScrollProgress<T extends HTMLElement>() {
   const ref = useRef<T>(null);
@@ -806,6 +827,7 @@ const paragraphs = [
 ];
 
 function App() {
+  useLenis();
   const { ref, progress } = useScrollProgress<HTMLDivElement>();
 
   // the whole original sequence below is compressed into 0 -> 0.85 (every
