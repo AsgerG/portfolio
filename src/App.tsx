@@ -961,11 +961,13 @@ function App() {
   // outro: now that the SVG has spawned in behind it, the foreground
   // scrolls up and fades out, uncovering more of the illustration as it goes
   const outroT = clamp01((progress - TIMELINE_SCALE) / (1 - TIMELINE_SCALE));
-  const EXIT_LIFT = 400; // px the outgoing content rises before it's fully
-  // faded out (was 200 — needed more travel before it disappears)
   const REVEAL_Y_START = 600; // illustration's own y position: travels from
   const REVEAL_Y_END = 80; // 600 (below the canvas) up to 80 (near the top)
   const revealY = lerp(REVEAL_Y_START, REVEAL_Y_END, outroT);
+  // outgoing content rises the same distance (520px) over the same outroT
+  // range, so it moves at the same rate/speed as the SVG above (was 400px,
+  // a slightly different — and thus mismatched — rate)
+  const EXIT_LIFT = REVEAL_Y_START - REVEAL_Y_END;
 
   // row 3's button label only shows up once the shape is mostly a rectangle
   const buttonTextT = clamp01((morphT - 0.6) / 0.4);
