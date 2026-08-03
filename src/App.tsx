@@ -967,11 +967,13 @@ function App() {
   // my_club (playersLineT) -> players fades in underneath it
   // (playersRevealT) -> a horizontal connector line grows right from
   // players (detailLineT) -> detailed_player_view fades in beside it
-  // (detailedPlayerViewRevealT). The camera pan (cameraOffsetX/Y, below)
-  // is NOT one of these discrete stages — it's a set of separate,
-  // continuous ramps that start as soon as each connector line begins
-  // growing and finish just before the destination image's own reveal,
-  // so every image ends up settled centered in the canvas as it spawns.
+  // (detailedPlayerViewRevealT). The vertical camera pan (cameraOffsetY,
+  // below) is NOT one of these discrete stages — it's a separate,
+  // continuous ramp that starts as soon as the next row is introduced and
+  // finishes just before that row's own reveal, so each row ends up
+  // roughly centered (in y) in the canvas as it spawns. No horizontal
+  // panning — each column is already about canvas-width, so both columns
+  // read as centered without any help.
   const outroT = clamp01((progress - TIMELINE_SCALE) / (1 - TIMELINE_SCALE));
   const BASE_SVG_END = 0.12; // outroT 0      -> 0.12: base SVG
   const DETAIL_SVG_END = 0.21; // outroT 0.12  -> 0.21: detail SVG
@@ -1010,26 +1012,23 @@ function App() {
   const playersRevealT = clamp01((outroT - PLAYERS_LINE_END) / (PLAYERS_END - PLAYERS_LINE_END));
   const detailLineT = clamp01((outroT - PLAYERS_END) / (DETAIL_LINE_END - PLAYERS_END));
   const detailedPlayerViewRevealT = clamp01((outroT - DETAIL_LINE_END) / (1 - DETAIL_LINE_END));
-  // continuous vertical camera pan: starts the instant row 2 is introduced
-  // (VLINE_END) and creeps up by one row (ROW_HEIGHT) slowly across
-  // everything from there through to PLAYERS_LINE_END — not a separate
-  // jump between reveals, just an ongoing slow drift underneath them
-  const scrollT = clamp01((outroT - VLINE_END) / (PLAYERS_LINE_END - VLINE_END));
-  const cameraOffsetY = lerp(0, ROW_HEIGHT, scrollT);
-
-  // continuous horizontal camera pan: every time the "current" image is
-  // in column 2 (x=500), the camera pans right by one COLUMN_WIDTH so it
-  // ends up centered exactly like column 1 always is; every time we come
-  // back to column 1 it pans back. Each pan starts as soon as its
-  // connector line begins growing and finishes just before the next
-  // image's own reveal, same slow/continuous philosophy as the vertical
-  // one above — so every newly spawned image settles centered in view.
-  const COLUMN_WIDTH = 450 + IMAGE_GAP; // horizontal spacing between columns
-  const panToSetPageT = clamp01((outroT - HOME_PAGE_END) / (VLINE_END - HOME_PAGE_END));
-  const panBackToMyClubT = clamp01((outroT - SOLUTION_VIEW_END) / (CONVERGE_LINES_END - SOLUTION_VIEW_END));
-  const panToDetailViewT = clamp01((outroT - PLAYERS_END) / (DETAIL_LINE_END - PLAYERS_END));
-  const cameraOffsetX =
-    COLUMN_WIDTH * (panToSetPageT - panBackToMyClubT + panToDetailViewT);
+  // continuous vertical-only camera pan: no horizontal panning — each row
+  // is 450px wide same as the canvas, so column 1 and column 2 are both
+  // already roughly centered horizontally without any help. Vertically,
+  // instead of shifting by a flat ROW_HEIGHT per row (which just
+  // top-aligns the new row), this pans so the CURRENT row's own center
+  // lands on the canvas's vertical center (CANVAS_CENTER_Y) — so whatever
+  // just spawned ends up roughly centered in the y-axis. Pans start as
+  // soon as the next row is introduced and finish just before that row's
+  // own reveal, same slow/continuous feel as before.
+  const CANVAS_CENTER_Y = 280; // half of the canvas's 560px height
+  const rowCenterOffset = (rowIndex: number) =>
+    ROW_HEIGHT * (rowIndex - 1) + IMAGE_HEIGHT / 2 - CANVAS_CENTER_Y;
+  const panToRow2T = clamp01((outroT - VLINE_END) / (MY_CLUB_END - VLINE_END));
+  const panToRow3T = clamp01((outroT - MY_CLUB_END) / (PLAYERS_LINE_END - MY_CLUB_END));
+  const cameraOffsetY =
+    rowCenterOffset(2) * panToRow2T +
+    (rowCenterOffset(3) - rowCenterOffset(2)) * panToRow3T;
   // outgoing content rises the same distance (520px) over the same baseT
   // range as the base SVG above (both driven by baseT, not raw outroT),
   // so the two stay synced/matched-rate through the whole exit
@@ -1981,17 +1980,13 @@ function App() {
               }}
             >
               {/* camera-pan layer: everything below shares one coordinate
-                  space (row 1 at y=0, row 2 at y=ROW_HEIGHT, column 1 at
-                  x=0, column 2 at x=COLUMN_WIDTH, etc). As each new image
-                  spawns, this pans (cameraOffsetX/Y) so it settles
-                  centered in the canvas instead of the canvas just
-                  clipping/overflowing — a slow, continuous scroll that
-                  keeps whatever's currently spawning in view. */}
-              <div
-                style={{
-                  transform: `translate(${-cameraOffsetX}px, ${-cameraOffsetY}px)`,
-                }}
-              >
+                  space (row 1 at y=0, row 2 at y=ROW_HEIGHT, row 3 at
+                  y=2*ROW_HEIGHT, etc). Vertical-only pan (cameraOffsetY) —
+                  as each new row spawns, this shifts up so that row's
+                  center lands roughly on the canvas's own vertical
+                  center, instead of the canvas just clipping/overflowing —
+                  a slow, continuous scroll. */}
+              <div style={{ transform: `translateY(${-cameraOffsetY}px)` }}>
               <svg
                 width="450"
                 height="309"
