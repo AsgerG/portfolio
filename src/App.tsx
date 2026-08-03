@@ -888,16 +888,24 @@ function App() {
   // instead of section 1 taking up roughly half. The exit/reveal still
   // travel the same pixel distances (EXIT_LIFT, REVEAL_Y_START/END below),
   // just spread across a bigger scroll range now that the outro has room.
-  const appearEnd = 0.0467 * TIMELINE_SCALE;
-  const moveT = clamp01((progress - appearEnd) / (0.0267 * TIMELINE_SCALE));
-  const spawnT = clamp01((progress - 0.0733 * TIMELINE_SCALE) / (0.0667 * TIMELINE_SCALE));
+  //
+  // sections 1-3 each hold their very last stage's finished state for the
+  // final 10% of that section (nothing left to animate — the next
+  // section's first stage doesn't start until the section boundary) —
+  // a brief pause before each transition, giving the reader a moment to
+  // take in what just happened before the next section kicks off. The
+  // outro isn't compressed this way; it already has its own internal
+  // pacing plus the trailing buffer holding the very end.
+  const appearEnd = 0.042 * TIMELINE_SCALE;
+  const moveT = clamp01((progress - appearEnd) / (0.024 * TIMELINE_SCALE));
+  const spawnT = clamp01((progress - 0.066 * TIMELINE_SCALE) / (0.06 * TIMELINE_SCALE));
   const svgOpacity = 1 - moveT;
 
   // "Neutrals" fades in once the new shades of grey start appearing,
   // not while black and white are just settling into the grid
   const neutralsLabelLocal = spawnT;
 
-  const stageD = clamp01((progress - 0.14 * TIMELINE_SCALE) / (0.0533 * TIMELINE_SCALE));
+  const stageD = clamp01((progress - 0.126 * TIMELINE_SCALE) / (0.048 * TIMELINE_SCALE));
   const blueMoveT = clamp01(stageD / 0.35);
   const blueLeftLocal = clamp01((stageD - 0.15) / 0.35);
   const blueRight1Local = clamp01((stageD - 0.45) / 0.35);
@@ -908,7 +916,7 @@ function App() {
 
   // the teal row and the purple circle unfold together: the row cascades
   // left to right, while purple starts at the same moment as the first dot
-  const stageRows = clamp01((progress - 0.1933 * TIMELINE_SCALE) / (0.0667 * TIMELINE_SCALE));
+  const stageRows = clamp01((progress - 0.174 * TIMELINE_SCALE) / (0.06 * TIMELINE_SCALE));
   const teal0Local = clamp01(stageRows / 0.5);
   const teal1Local = clamp01((stageRows - 0.15) / 0.5);
   const teal2Local = clamp01((stageRows - 0.3) / 0.5);
@@ -918,44 +926,50 @@ function App() {
   const analogousLabelLocal = clamp01(stageRows / 0.5);
 
   // green and red spawn in together
-  const stageSignal = clamp01((progress - 0.26 * TIMELINE_SCALE) / (0.0733 * TIMELINE_SCALE));
+  const stageSignal = clamp01((progress - 0.234 * TIMELINE_SCALE) / (0.066 * TIMELINE_SCALE));
   const greenLocal = clamp01(stageSignal / 0.6);
   const redLocal = clamp01(stageSignal / 0.6);
 
-  // "Signal" fades in as green and red spawn
+  // "Signal" fades in as green and red spawn — the last stage of section
+  // 1, settling by 0.225 (90% of the way through the section), then
+  // holding until 0.25 hands off to section 2
   const signalLabelLocal = clamp01(stageSignal / 0.6);
 
   // all five rows form together, then every claimed circle morphs into
   // its row's rectangular shape
-  const stageRowAll = clamp01((progress - 0.3333 * TIMELINE_SCALE) / (0.1905 * TIMELINE_SCALE));
+  const stageRowAll = clamp01((progress - 0.3333 * TIMELINE_SCALE) / (0.1715 * TIMELINE_SCALE));
   const stageRow1 = stageRowAll;
   const stageRow2 = stageRowAll;
   const stageRow3 = stageRowAll;
   const stageRow4 = stageRowAll;
   const stageRow5 = stageRowAll;
-  const morphT = clamp01((progress - 0.5238 * TIMELINE_SCALE) / (0.1429 * TIMELINE_SCALE));
+  const morphT = clamp01((progress - 0.5048 * TIMELINE_SCALE) / (0.1286 * TIMELINE_SCALE));
 
   // row 1's swatches restack into overlapping cards, row 2's text frames
-  // onto the first card, and row 3's buttons frame onto the duplicate stack
-  const stackT = clamp01((progress - 0.6667 * TIMELINE_SCALE) / (0.0889 * TIMELINE_SCALE));
+  // onto the first card, and row 3's buttons frame onto the duplicate
+  // stack — the last stage of section 2, settling by 0.475, then holding
+  // until 0.5 hands off to section 3
+  const stackT = clamp01((progress - 0.6667 * TIMELINE_SCALE) / (0.08 * TIMELINE_SCALE));
 
   // only once that initial move settles does row 2's text duplicate and
   // the copy shift down to sit framed against the stack's second card
-  const textDupT = clamp01((progress - 0.7556 * TIMELINE_SCALE) / (0.0667 * TIMELINE_SCALE));
+  const textDupT = clamp01((progress - 0.7467 * TIMELINE_SCALE) / (0.06 * TIMELINE_SCALE));
 
   // then, once that second copy settles, it duplicates again and the new
   // copy shifts down another 43px to sit framed against the third card
-  const textDupT2 = clamp01((progress - 0.8222 * TIMELINE_SCALE) / (0.0667 * TIMELINE_SCALE));
+  const textDupT2 = clamp01((progress - 0.8067 * TIMELINE_SCALE) / (0.06 * TIMELINE_SCALE));
 
   // then, three words spawn in underneath the stacked groups, one at a time
-  const wordsT = clamp01((progress - 0.8889 * TIMELINE_SCALE) / (0.0556 * TIMELINE_SCALE));
+  const wordsT = clamp01((progress - 0.8667 * TIMELINE_SCALE) / (0.05 * TIMELINE_SCALE));
   const word1Local = clamp01(wordsT / (1 / 3));
   const word2Local = clamp01((wordsT - 1 / 3) / (1 / 3));
   const word3Local = clamp01((wordsT - 2 / 3) / (1 / 3));
 
   // finally, once those words have all spawned, a green checkmark appears
-  // to the left of each one, one at a time, and its text turns to match
-  const checksT = clamp01((progress - 0.9444 * TIMELINE_SCALE) / (0.0556 * TIMELINE_SCALE));
+  // to the left of each one, one at a time, and its text turns to match —
+  // the last stage of section 3, settling by 0.725, then holding until
+  // 0.75 hands off to the outro
+  const checksT = clamp01((progress - 0.9167 * TIMELINE_SCALE) / (0.05 * TIMELINE_SCALE));
   const check1Local = clamp01(checksT / (1 / 3));
   const check2Local = clamp01((checksT - 1 / 3) / (1 / 3));
   const check3Local = clamp01((checksT - 2 / 3) / (1 / 3));
@@ -1112,7 +1126,7 @@ function App() {
   const row2BgAlpha = 1 - clamp01((morphT - 0.6) / 0.4);
 
   // everything not claimed by a row fades away early in that sequence
-  const fade = 1 - clamp01((progress - 0.3333 * TIMELINE_SCALE) / (0.1429 * TIMELINE_SCALE));
+  const fade = 1 - clamp01((progress - 0.3333 * TIMELINE_SCALE) / (0.1286 * TIMELINE_SCALE));
 
   const rowStageByColor: Record<string, number> = {
     '#121212': stageRow1,
