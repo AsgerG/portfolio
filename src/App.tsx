@@ -2788,7 +2788,7 @@ function App() {
               style={{
                 top: `calc(50% - ${CANVAS_HEIGHT / 2}px + ${(i - sectionProgress) * TEXT_ITEM_GAP}px)`,
                 opacity: i < activeSection ? 0 : i === activeSection ? 1 : 0.3,
-                transition: 'opacity 0.4s ease',
+                transition: 'opacity 1.5s ease',
               }}
             >
               {text}
