@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
 import Lenis from 'lenis';
 import sbcHomePage from './assets/sbc_home_page.png';
+import sbcSetPage from './assets/sbc_set_page.png';
 
 // drives smooth/eased scrolling site-wide. Lenis animates the native scroll
 // position itself (window.scrollTo under the hood), so it still dispatches
@@ -948,24 +949,27 @@ function App() {
   const check2Local = clamp01((checksT - 1 / 3) / (1 / 3));
   const check3Local = clamp01((checksT - 2 / 3) / (1 / 3));
 
-  // outro is split into three back-to-back parts of outroT: first the base
+  // outro is split into four back-to-back parts of outroT: first the base
   // SVG stays hidden until it starts moving, then moves + fades in
   // together (baseT). Only once it's fully stopped and fully visible does
   // the detailed SVG start its own fade-in (detailRevealT). Only once
-  // *that's* fully visible does the home-page image start fading in on
-  // top of it (imageRevealT) — each stage waits for the previous one to
-  // completely finish before it spawns.
+  // *that's* fully visible does the home-page image fade in
+  // (homePageRevealT), and only once THAT's fully visible does the
+  // set-page image fade in beside it (setPageRevealT) — each stage waits
+  // for the previous one to completely finish before it spawns.
   const outroT = clamp01((progress - TIMELINE_SCALE) / (1 - TIMELINE_SCALE));
-  const BASE_SVG_END = 0.4; // outroT 0    -> 0.4: base SVG
-  const DETAIL_SVG_END = 0.7; // outroT 0.4 -> 0.7: detail SVG
-  // outroT 0.7 -> 1: home-page image
+  const BASE_SVG_END = 0.3; // outroT 0    -> 0.3:  base SVG
+  const DETAIL_SVG_END = 0.55; // outroT 0.3 -> 0.55: detail SVG
+  const HOME_PAGE_END = 0.8; // outroT 0.55 -> 0.8: home-page image
+  // outroT 0.8 -> 1: set-page image
   const baseT = clamp01(outroT / BASE_SVG_END);
   const REVEAL_Y_START = 600; // illustration's own y position: travels from
   const REVEAL_Y_END = 80; // 600 (below the canvas) up to 80 (near the top)
   const revealY = lerp(REVEAL_Y_START, REVEAL_Y_END, baseT);
   const revealT = baseT;
   const detailRevealT = clamp01((outroT - BASE_SVG_END) / (DETAIL_SVG_END - BASE_SVG_END));
-  const imageRevealT = clamp01((outroT - DETAIL_SVG_END) / (1 - DETAIL_SVG_END));
+  const homePageRevealT = clamp01((outroT - DETAIL_SVG_END) / (HOME_PAGE_END - DETAIL_SVG_END));
+  const setPageRevealT = clamp01((outroT - HOME_PAGE_END) / (1 - HOME_PAGE_END));
   // outgoing content rises the same distance (520px) over the same baseT
   // range as the base SVG above (both driven by baseT, not raw outroT),
   // so the two stay synced/matched-rate through the whole exit
@@ -2063,7 +2067,26 @@ function App() {
                   width: 450,
                   height: 'auto',
                   zIndex: 2,
-                  opacity: imageRevealT,
+                  opacity: homePageRevealT,
+                }}
+              />
+
+              {/* set-page screenshot — same 450px width, positioned right
+                  where sbc_home_page leaves off (left: 450), so it sits
+                  immediately to its right. Waits until the home-page image
+                  is fully visible before it starts fading in. */}
+              <img
+                src={sbcSetPage}
+                alt=""
+                width={450}
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 450,
+                  width: 450,
+                  height: 'auto',
+                  zIndex: 2,
+                  opacity: setPageRevealT,
                 }}
               />
             </div>
