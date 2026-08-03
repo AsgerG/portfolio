@@ -1177,21 +1177,51 @@ function App() {
           : 'Part 4: Wireframes & overview';
 
   // same four boundaries as sectionName above, as numeric [start, end]
-  // pairs so each section's text can compute its own local roll-in
-  // progress. Each block only takes the first ROLL_IN_FRACTION of its own
-  // section to fully roll in — then it just sits still (pinned via
-  // sticky) for the rest of that section, instead of animating in slowly
-  // across the whole thing.
+  // pairs so each section's text can compute its own transition timing
   const SECTION_RANGES: [number, number][] = [
     [0, 0.25],
     [0.25, 0.5],
     [0.5, 0.75],
     [0.75, 1],
   ];
-  const ROLL_IN_FRACTION = 0.15;
-  const sectionRollT = SECTION_RANGES.map(([start, end]) =>
-    clamp01((progress - start) / ((end - start) * ROLL_IN_FRACTION)),
-  );
+
+  // each text block scrolls up and fades as it leaves, while the next
+  // block scrolls up (from underneath, i.e. it starts below its resting
+  // position) and fades in at the same time — a crossfade centered on
+  // each section boundary rather than a hard cut. TEXT_TRANSITION_HALF is
+  // deliberately generous (not a snappy instant swap): the whole
+  // transition spans 2*TEXT_TRANSITION_HALF = 0.08 of total progress,
+  // half before the boundary and half after, so outgoing and incoming
+  // text overlap on-screen for a moment, both drifting upward together.
+  const TEXT_TRANSITION_HALF = 0.04;
+  const TEXT_OFFSET = 40; // px each block travels while entering/exiting
+  const sectionTextT = SECTION_RANGES.map(([start, end], i) => {
+    const isFirst = i === 0;
+    const isLast = i === SECTION_RANGES.length - 1;
+    // entrance: fades/slides up starting a bit before this section's own
+    // start (so it overlaps with the previous block's exit) — except the
+    // very first block, which has nothing before it to overlap with, so
+    // it simply enters right from progress 0
+    const entryStart = isFirst ? start : start - TEXT_TRANSITION_HALF;
+    const entryEnd = start + TEXT_TRANSITION_HALF;
+    const enterT = clamp01((progress - entryStart) / (entryEnd - entryStart));
+    // exit: continues sliding up and fades out a bit before this
+    // section's own end (overlapping with the next block's entrance) —
+    // except the very last block, which has nothing after it, so it just
+    // stays resting once fully entered
+    let exitT = 0;
+    if (!isLast) {
+      const exitStart = end - TEXT_TRANSITION_HALF;
+      const exitEnd = end + TEXT_TRANSITION_HALF;
+      exitT = clamp01((progress - exitStart) / (exitEnd - exitStart));
+    }
+    const opacity = enterT * (1 - exitT);
+    // one continuous upward drift: starts TEXT_OFFSET below rest, eases
+    // to 0 (resting) as it enters, then keeps drifting up to -TEXT_OFFSET
+    // as it exits — never reverses direction
+    const translateY = TEXT_OFFSET * (1 - enterT) - TEXT_OFFSET * exitT;
+    return { opacity, translateY };
+  });
 
   return (
     <div className="bg-[#15181D]">
@@ -2724,35 +2754,30 @@ function App() {
         </div>
       </div>
 
-      {/* the actual case-study text, one fixed layer per section. Each is
-          visible (and interactive-free, hence pointer-events-none) only
-          while `progress` is inside that section's own SECTION_RANGES
-          span, so it stays glued to the same spot on screen for that
-          section's *entire* length — right up until the next section
-          starts — regardless of scroll speed or container height. Positioned
-          to sit over the right half of the grid (where the text column
-          lives) via left/width: 50%. */}
-      {SECTION_RANGES.map(([start, end], i) => {
-        const isLast = i === SECTION_RANGES.length - 1;
-        const active = progress >= start && (isLast || progress < end);
-        return (
-          <div
-            key={i}
-            className="fixed top-0 h-screen flex items-center px-12 pointer-events-none"
-            style={{ left: '50%', width: '50%', zIndex: 15 }}
+      {/* the actual case-study text, one fixed layer per section. Stays
+          glued to the same spot on screen for that section's entire
+          length (see sectionTextT above), scrolling up and fading out as
+          its section ends while the next block scrolls up from
+          underneath and fades in — a crossfade rather than a hard swap.
+          Positioned to sit over the right half of the grid (where the
+          text column lives) via left/width: 50%. */}
+      {SECTION_RANGES.map((_, i) => (
+        <div
+          key={i}
+          className="fixed top-0 h-screen flex items-center px-12 pointer-events-none overflow-hidden"
+          style={{ left: '50%', width: '50%', zIndex: 15 }}
+        >
+          <p
+            className="text-white/70 text-lg max-w-md"
+            style={{
+              opacity: sectionTextT[i].opacity,
+              transform: `translateY(${sectionTextT[i].translateY}px)`,
+            }}
           >
-            <p
-              className="text-white/70 text-lg max-w-md"
-              style={{
-                opacity: active ? sectionRollT[i] : 0,
-                transform: `translateY(${lerp(24, 0, active ? sectionRollT[i] : 0)}px)`,
-              }}
-            >
-              {sectionCopy[i]}
-            </p>
-          </div>
-        );
-      })}
+            {sectionCopy[i]}
+          </p>
+        </div>
+      ))}
     </div>
   );
 }
