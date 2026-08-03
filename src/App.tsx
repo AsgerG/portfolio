@@ -859,52 +859,33 @@ function App() {
   useLenis();
   const { ref, progress } = useScrollProgress<HTMLDivElement>();
 
-  // the whole original sequence below is compressed into 0 -> 0.75 (every
-  // threshold and span rescaled so section 1, section 2, and section 3
-  // each land on an equal third of that range — 25% of the total scroll
-  // apiece), freeing up TIMELINE_SCALE -> 1 for the outro (also 25%):
-  // everything scrolls up and vanishes, revealing the new illustration +
-  // screenshot mosaic underneath. All four sections now get the same
-  // share of scroll, instead of section 1 alone eating up roughly half.
-  //
-  // 0      -> 0.0467: circles appear next to the logo
-  // 0.0467 -> 0.0733: logo fades out, circles slide into their grid layout
-  // 0.0733 -> 0.14:   white slides right, the greyscale spawns in along the way
-  // 0.14   -> 0.1933: blue steps right, three shades of blue spawn in around it
-  // 0.1933 -> 0.26:   the teal row + purple circle spawn underneath the blue row
-  // 0.26   -> 0.3333: the signal group (green + red) spawns underneath that
-  // (section 1: color palette, 0 -> 0.3333, i.e. 0 -> 0.25 of total scroll)
-  // 0.3333 -> 0.5238: all five rows form together, as everything unclaimed
-  //                   fades away
-  // 0.5238 -> 0.6667: every circle in a row morphs into that row's shape
-  // (section 2: color semantics, 0.3333 -> 0.6667, i.e. 0.25 -> 0.5 of total)
-  // 0.6667 -> 1:      row 1's swatches restack into overlapping cards
-  // (section 3: UI components, 0.6667 -> 1, i.e. 0.5 -> 0.75 of total)
-  // (all scaled by TIMELINE_SCALE)
-  // 0.75 -> 1: outro — everything scrolls up and fades out, the new
-  //            illustration + screenshot mosaic reveal underneath
-  // (section 4: wireframes & overview, i.e. 0.75 -> 1 of total)
-  const TIMELINE_SCALE = 0.75; // was 0.95 — the outro (and each of the
-  // other three sections) now gets an even 25% of the total scroll,
-  // instead of section 1 taking up roughly half. The exit/reveal still
-  // travel the same pixel distances (EXIT_LIFT, REVEAL_Y_START/END below),
-  // just spread across a bigger scroll range now that the outro has room.
+  // five equal sections now split the whole scroll — color palette,
+  // color semantics, UI components, wireframes, and overview — each
+  // exactly SECTION_LEN (1/5) of total progress, and each hands off to
+  // the next after an identical SECTION_BREAK-long pause (nothing
+  // animating) once its own content settles. Sections 1-3 are the circle
+  // animation (0 -> TIMELINE_SCALE); sections 4-5 are the two halves of
+  // the outro (TIMELINE_SCALE -> 1) — 4 is the illustration reveal, 5 is
+  // the screenshot mosaic. Only section 5, being last, skips the pause
+  // (nothing follows it here; the trailing buffer below handles holding
+  // the very end of the page instead).
   //
   // sections 1-3 each hold their very last stage's finished state for a
   // brief pause before the next section's first stage begins — a moment
   // for the reader to take in what just happened. SECTION_BREAK is the
-  // one shared constant controlling that pause's length, so all three
-  // are guaranteed identical (not just approximately equal) — each
-  // section's last stage is defined to end exactly at SEC*_END below,
-  // which is derived directly from SECTION_BREAK, rather than from an
-  // independently-rounded width that could drift out of sync. The outro
-  // isn't compressed this way; it already has its own internal pacing
-  // plus the trailing buffer holding the very end.
-  const SECTION_LEN = 0.25; // every section is an equal quarter of total scroll
-  const SECTION_BREAK = 0.025; // identical pause length before each of the 3 transitions
-  const SEC1_END = SECTION_LEN - SECTION_BREAK; // 0.225 — section 1's last stage ends here
-  const SEC2_END = 2 * SECTION_LEN - SECTION_BREAK; // 0.475 — section 2's last stage ends here
-  const SEC3_END = 3 * SECTION_LEN - SECTION_BREAK; // 0.725 — section 3's last stage ends here
+  // one shared constant controlling that pause's length, so all four
+  // transitions (1->2, 2->3, 3->4, 4->5) are guaranteed identical, not
+  // just approximately equal: each section's last stage is defined to
+  // end exactly at SEC*_END below, derived directly from SECTION_BREAK,
+  // rather than from an independently-rounded width that could drift out
+  // of sync.
+  const SECTION_LEN = 0.2; // every section is an equal fifth of total scroll
+  const SECTION_BREAK = 0.025; // identical pause length before each of the 4 transitions
+  const TIMELINE_SCALE = 3 * SECTION_LEN; // 0.6 — sections 1-3 (circle animation) end here, outro (sections 4-5) takes the rest
+  const SEC1_END = SECTION_LEN - SECTION_BREAK; // 0.175 — section 1's last stage ends here
+  const SEC2_END = 2 * SECTION_LEN - SECTION_BREAK; // 0.375 — section 2's last stage ends here
+  const SEC3_END = 3 * SECTION_LEN - SECTION_BREAK; // 0.575 — section 3's last stage ends here
+  const SEC4_END = 4 * SECTION_LEN - SECTION_BREAK; // 0.775 — section 4's (wireframes) last stage ends here
   const appearEnd = 0.042 * TIMELINE_SCALE;
   const moveT = clamp01((progress - appearEnd) / (0.024 * TIMELINE_SCALE));
   const spawnT = clamp01((progress - 0.066 * TIMELINE_SCALE) / (0.06 * TIMELINE_SCALE));
@@ -1031,40 +1012,54 @@ function App() {
   // centered without any help. (Pacing across all these stages will get a
   // proper pass later — this is just wiring up the next image for now.)
   const outroT = clamp01((progress - TIMELINE_SCALE) / (1 - TIMELINE_SCALE));
-  // every stage below now gets one of exactly two uniform durations: R
-  // (1/18 of outroT) for every image/SVG reveal, L (half of R, 1/36) for
-  // every connector-line growth — instead of durations that drifted
-  // further out of proportion each time a new row got squeezed in by
-  // rescaling everything that came before it. 13 reveal stages + 10 line
-  // stages, 13*R + 10*L = 13*R + 10*(R/2) = 18*R = 1, so every reveal
-  // takes the same slice of scroll as every other reveal, and every line
-  // takes the same slice as every other line, start to finish — that's
-  // what makes the scroll speed feel consistent all the way through.
-  const BASE_SVG_END = 0.0556; // outroT 0      -> 0.0556: base SVG
-  const DETAIL_SVG_END = 0.1111; // outroT 0.0556 -> 0.1111: detail SVG
-  const HOME_PAGE_END = 0.1667; // outroT 0.1111  -> 0.1667: home-page image
-  const LINE_END = 0.1944; // outroT 0.1667       -> 0.1944: horizontal connector line
-  const SET_PAGE_END = 0.25; // outroT 0.1944     -> 0.25: set-page image
-  const VLINE_END = 0.2778; // outroT 0.25        -> 0.2778: vertical connector line
+
+  // section 4 (wireframes): base SVG spawn + detail SVG fade-in, split
+  // evenly across this section's own active window, in outroT-local
+  // terms — ending at WIREFRAMES_ACTIVE_END, then holding (nothing
+  // animating) until OVERVIEW_START hands off to section 5. Both
+  // boundaries are derived from SEC4_END/SECTION_LEN above (converted
+  // from absolute progress into outroT's own 0-1 scale) rather than
+  // hardcoded, so they stay correct if the section lengths ever change.
+  const WIREFRAMES_ACTIVE_END = (SEC4_END - TIMELINE_SCALE) / (1 - TIMELINE_SCALE); // 0.4375
+  const OVERVIEW_START = (4 * SECTION_LEN - TIMELINE_SCALE) / (1 - TIMELINE_SCALE); // 0.5
+  const BASE_SVG_END = WIREFRAMES_ACTIVE_END / 2;
+  const DETAIL_SVG_END = WIREFRAMES_ACTIVE_END;
+
+  // section 5 (overview): the screenshot mosaic, spread uniformly across
+  // its own remaining span (OVERVIEW_START -> 1, no pause carved out
+  // since it's the last section) — same 2:1 reveal:line-growth ratio as
+  // before (11 reveal stages, 10 connector-line stages): OVERVIEW_R for
+  // every image/SVG reveal, OVERVIEW_L (half of that) for every
+  // connector-line growth, so 11*R + 10*L = 11*R + 5*R = 16*R spans the
+  // whole section — every reveal takes the same slice as every other
+  // reveal, every line the same slice as every other line, keeping the
+  // scroll speed consistent within this section same as before.
+  const OVERVIEW_WIDTH = 1 - OVERVIEW_START;
+  const OVERVIEW_R = OVERVIEW_WIDTH / 16;
+  const OVERVIEW_L = OVERVIEW_R / 2;
+  const HOME_PAGE_END = OVERVIEW_START + OVERVIEW_R; // home-page image
+  const LINE_END = HOME_PAGE_END + OVERVIEW_L; // horizontal connector line
+  const SET_PAGE_END = LINE_END + OVERVIEW_R; // set-page image
+  const VLINE_END = SET_PAGE_END + OVERVIEW_L; // vertical connector line
   // (also where the continuous vertical camera pan begins — see cameraOffsetY below)
-  const SOLUTION_VIEW_END = 0.3333; // outroT 0.2778 -> 0.3333: solution-view image
-  const CONVERGE_LINES_END = 0.3611; // outroT 0.3333 -> 0.3611: the two lines to my_club
-  const MY_CLUB_END = 0.4167; // outroT 0.3611    -> 0.4167: my_club image
-  const PLAYERS_LINE_END = 0.4444; // outroT 0.4167 -> 0.4444: connector line down from my_club
-  const PLAYERS_END = 0.5; // outroT 0.4444       -> 0.5: players image
-  const DETAIL_LINE_END = 0.5278; // outroT 0.5   -> 0.5278: connector line right from players
-  const DETAILED_PLAYER_VIEW_END = 0.5833; // outroT 0.5278 -> 0.5833: detailed_player_view image
-  const EVOLUTIONS_LINE_END = 0.6111; // outroT 0.5833 -> 0.6111: connector line down from players
-  const EVOLUTIONS_END = 0.6667; // outroT 0.6111 -> 0.6667: evolutions image
-  const BUILDER_LINES_END = 0.6944; // outroT 0.6667 -> 0.6944: the two lines to evolution_builder
-  const EVOLUTION_BUILDER_END = 0.75; // outroT 0.6944 -> 0.75: evolution_builder image
-  const TACTICS_LINE_END = 0.7778; // outroT 0.75 -> 0.7778: connector line down from evolutions
-  const TACTICS_END = 0.8333; // outroT 0.7778   -> 0.8333: tactics image
-  const SQUAD_BUILDER_LINES_END = 0.8611; // outroT 0.8333 -> 0.8611: the two lines to squad_builder
-  const SQUAD_BUILDER_END = 0.9167; // outroT 0.8611 -> 0.9167: squad_builder image
-  const ROW6_LINES_END = 0.9444; // outroT 0.9167 -> 0.9444: lines down from tactics and squad_builder
+  const SOLUTION_VIEW_END = VLINE_END + OVERVIEW_R; // solution-view image
+  const CONVERGE_LINES_END = SOLUTION_VIEW_END + OVERVIEW_L; // the two lines to my_club
+  const MY_CLUB_END = CONVERGE_LINES_END + OVERVIEW_R; // my_club image
+  const PLAYERS_LINE_END = MY_CLUB_END + OVERVIEW_L; // connector line down from my_club
+  const PLAYERS_END = PLAYERS_LINE_END + OVERVIEW_R; // players image
+  const DETAIL_LINE_END = PLAYERS_END + OVERVIEW_L; // connector line right from players
+  const DETAILED_PLAYER_VIEW_END = DETAIL_LINE_END + OVERVIEW_R; // detailed_player_view image
+  const EVOLUTIONS_LINE_END = DETAILED_PLAYER_VIEW_END + OVERVIEW_L; // connector line down from players
+  const EVOLUTIONS_END = EVOLUTIONS_LINE_END + OVERVIEW_R; // evolutions image
+  const BUILDER_LINES_END = EVOLUTIONS_END + OVERVIEW_L; // the two lines to evolution_builder
+  const EVOLUTION_BUILDER_END = BUILDER_LINES_END + OVERVIEW_R; // evolution_builder image
+  const TACTICS_LINE_END = EVOLUTION_BUILDER_END + OVERVIEW_L; // connector line down from evolutions
+  const TACTICS_END = TACTICS_LINE_END + OVERVIEW_R; // tactics image
+  const SQUAD_BUILDER_LINES_END = TACTICS_END + OVERVIEW_L; // the two lines to squad_builder
+  const SQUAD_BUILDER_END = SQUAD_BUILDER_LINES_END + OVERVIEW_R; // squad_builder image
+  const ROW6_LINES_END = SQUAD_BUILDER_END + OVERVIEW_L; // lines down from tactics and squad_builder
   // (also where the continuous camera pan finishes)
-  // outroT 0.9444 -> 1: meta_rating_explainer + squad_tactics images (together)
+  // ROW6_LINES_END -> 1: meta_rating_explainer + squad_tactics images (together)
   const IMAGE_GAP = 50; // px gap between images, reused for every gap
   const IMAGE_HEIGHT = 308.25; // rendered height of the 450px-wide 1200x822
   // screenshots (sbc_set_page, solution_view, my_club, players,
@@ -1165,21 +1160,19 @@ function App() {
   };
 
   // five named sections across the whole scroll, for the readout next to
-  // the progress counter below — the first three are even quarters
-  // (0.25 apiece); the old "Wireframes & overview" quarter is now split
-  // in two right where the illustration reveal hands off to the image
-  // mosaic (DETAIL_SVG_END, in outroT's own 0-1 scale, converted to
-  // absolute progress) — Wireframes covers the illustration itself,
-  // Overview starts the moment we begin drawing/spawning screenshots.
-  const OVERVIEW_START = TIMELINE_SCALE + DETAIL_SVG_END * (1 - TIMELINE_SCALE);
+  // the progress counter below — every section is an equal SECTION_LEN
+  // (0.2) wide, so the four boundaries below are just 1x/2x/3x/4x
+  // SECTION_LEN in absolute progress terms (3x = TIMELINE_SCALE, where
+  // the circle animation hands off to the outro).
+  const OVERVIEW_SECTION_START = 4 * SECTION_LEN;
   const sectionName =
-    progress < 0.25
+    progress < SECTION_LEN
       ? 'Part 1: Color palette'
-      : progress < 0.5
+      : progress < 2 * SECTION_LEN
         ? 'Part 2: Color semantics'
-        : progress < 0.75
+        : progress < TIMELINE_SCALE
           ? 'Part 3: UI components'
-          : progress < OVERVIEW_START
+          : progress < OVERVIEW_SECTION_START
             ? 'Part 4: Wireframes'
             : 'Part 5: Overview';
 
@@ -1189,13 +1182,13 @@ function App() {
   // opacity), the rest sit dimmed at 30%, no entrance/exit animation or
   // overlap
   const activeSection =
-    progress < 0.25
+    progress < SECTION_LEN
       ? 0
-      : progress < 0.5
+      : progress < 2 * SECTION_LEN
         ? 1
-        : progress < 0.75
+        : progress < TIMELINE_SCALE
           ? 2
-          : progress < OVERVIEW_START
+          : progress < OVERVIEW_SECTION_START
             ? 3
             : 4;
   // the animation canvas is 560px tall, centered in its own h-screen
