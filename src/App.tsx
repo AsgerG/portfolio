@@ -4,6 +4,7 @@ import sbcHomePage from './assets/sbc_home_page.png';
 import sbcSetPage from './assets/sbc_set_page.png';
 import solutionView from './assets/solution_view.png';
 import myClub from './assets/my_club.png';
+import players from './assets/players.png';
 
 // drives smooth/eased scrolling site-wide. Lenis animates the native scroll
 // position itself (window.scrollTo under the hood), so it still dispatches
@@ -951,30 +952,38 @@ function App() {
   const check2Local = clamp01((checksT - 1 / 3) / (1 / 3));
   const check3Local = clamp01((checksT - 2 / 3) / (1 / 3));
 
-  // outro is split into nine back-to-back parts of outroT — each stage
-  // waits for the previous one to completely finish before it starts:
-  // base SVG spawns + moves (baseT) -> detail SVG fades in on top
-  // (detailRevealT) -> home-page image fades in (homePageRevealT) ->
-  // horizontal connector line grows across the gap (lineT) -> set-page
-  // image fades in beside it (setPageRevealT) -> vertical connector line
-  // grows down from set-page (vLineT) -> solution-view image fades in
-  // underneath it (solutionViewRevealT) -> two more connector lines grow
-  // at once — one down from home-page, one right-to-left from
-  // solution-view — both converging on my_club's position (convergeT) ->
-  // my_club fades in where they meet (myClubRevealT).
+  // outro is split into back-to-back parts of outroT — each stage waits
+  // for the previous one to completely finish before it starts: base SVG
+  // spawns + moves (baseT) -> detail SVG fades in on top (detailRevealT)
+  // -> home-page image fades in (homePageRevealT) -> horizontal connector
+  // line grows across the gap (lineT) -> set-page image fades in beside
+  // it (setPageRevealT) -> vertical connector line grows down from
+  // set-page (vLineT) -> solution-view image fades in underneath it
+  // (solutionViewRevealT) -> two more connector lines grow at once — one
+  // down from home-page, one right-to-left from solution-view — both
+  // converging on my_club's position (convergeT) -> my_club fades in
+  // where they meet (myClubRevealT) -> the camera pans up one row
+  // (scrollT/cameraOffset) so there's room below for the next row -> a
+  // connector line grows down from my_club (playersLineT) -> players
+  // fades in underneath it (playersRevealT).
   const outroT = clamp01((progress - TIMELINE_SCALE) / (1 - TIMELINE_SCALE));
-  const BASE_SVG_END = 0.15; // outroT 0      -> 0.15: base SVG
-  const DETAIL_SVG_END = 0.28; // outroT 0.15  -> 0.28: detail SVG
-  const HOME_PAGE_END = 0.4; // outroT 0.28    -> 0.4:  home-page image
-  const LINE_END = 0.46; // outroT 0.4         -> 0.46: horizontal connector line
-  const SET_PAGE_END = 0.58; // outroT 0.46    -> 0.58: set-page image
-  const VLINE_END = 0.64; // outroT 0.58       -> 0.64: vertical connector line
-  const SOLUTION_VIEW_END = 0.76; // outroT 0.64 -> 0.76: solution-view image
-  const CONVERGE_LINES_END = 0.85; // outroT 0.76 -> 0.85: the two lines to my_club
-  // outroT 0.85 -> 1: my_club image
+  const BASE_SVG_END = 0.13; // outroT 0      -> 0.13: base SVG
+  const DETAIL_SVG_END = 0.24; // outroT 0.13  -> 0.24: detail SVG
+  const HOME_PAGE_END = 0.34; // outroT 0.24   -> 0.34: home-page image
+  const LINE_END = 0.39; // outroT 0.34        -> 0.39: horizontal connector line
+  const SET_PAGE_END = 0.49; // outroT 0.39    -> 0.49: set-page image
+  const VLINE_END = 0.54; // outroT 0.49       -> 0.54: vertical connector line
+  const SOLUTION_VIEW_END = 0.64; // outroT 0.54 -> 0.64: solution-view image
+  const CONVERGE_LINES_END = 0.71; // outroT 0.64 -> 0.71: the two lines to my_club
+  const MY_CLUB_END = 0.78; // outroT 0.71     -> 0.78: my_club image
+  const SCROLL_END = 0.85; // outroT 0.78      -> 0.85: camera pans up one row
+  const PLAYERS_LINE_END = 0.92; // outroT 0.85 -> 0.92: connector line down from my_club
+  // outroT 0.92 -> 1: players image
   const IMAGE_GAP = 50; // px gap between images, reused for every gap
   const IMAGE_HEIGHT = 308.25; // rendered height of the 450px-wide 1200x822
-  // screenshots (sbc_set_page, solution_view, my_club) at that aspect ratio
+  // screenshots (sbc_set_page, solution_view, my_club, players) at that
+  // aspect ratio
+  const ROW_HEIGHT = IMAGE_HEIGHT + IMAGE_GAP; // vertical spacing between rows
   const baseT = clamp01(outroT / BASE_SVG_END);
   const REVEAL_Y_START = 600; // illustration's own y position: travels from
   const REVEAL_Y_END = 80; // 600 (below the canvas) up to 80 (near the top)
@@ -987,7 +996,13 @@ function App() {
   const vLineT = clamp01((outroT - SET_PAGE_END) / (VLINE_END - SET_PAGE_END));
   const solutionViewRevealT = clamp01((outroT - VLINE_END) / (SOLUTION_VIEW_END - VLINE_END));
   const convergeT = clamp01((outroT - SOLUTION_VIEW_END) / (CONVERGE_LINES_END - SOLUTION_VIEW_END));
-  const myClubRevealT = clamp01((outroT - CONVERGE_LINES_END) / (1 - CONVERGE_LINES_END));
+  const myClubRevealT = clamp01((outroT - CONVERGE_LINES_END) / (MY_CLUB_END - CONVERGE_LINES_END));
+  // camera pans up by one row (ROW_HEIGHT) so row 3 (players) has room to
+  // be visible below — a slow, smooth scroll rather than an instant jump
+  const scrollT = clamp01((outroT - MY_CLUB_END) / (SCROLL_END - MY_CLUB_END));
+  const cameraOffset = lerp(0, ROW_HEIGHT, scrollT);
+  const playersLineT = clamp01((outroT - SCROLL_END) / (PLAYERS_LINE_END - SCROLL_END));
+  const playersRevealT = clamp01((outroT - PLAYERS_LINE_END) / (1 - PLAYERS_LINE_END));
   // outgoing content rises the same distance (520px) over the same baseT
   // range as the base SVG above (both driven by baseT, not raw outroT),
   // so the two stay synced/matched-rate through the whole exit
@@ -1938,6 +1953,14 @@ function App() {
                 transform: 'translateX(-50%)',
               }}
             >
+              {/* camera-pan layer: everything below shares one coordinate
+                  space (row 1 at y=0, row 2 at y=ROW_HEIGHT, row 3 at
+                  y=2*ROW_HEIGHT, etc). As new rows are added below the
+                  canvas's visible area, this shifts the whole thing up by
+                  cameraOffset (one ROW_HEIGHT per new row so far) instead
+                  of the canvas just clipping/overflowing — a slow scroll
+                  that keeps whatever's spawning in view. */}
+              <div style={{ transform: `translateY(${-cameraOffset}px)` }}>
               <svg
                 width="450"
                 height="309"
@@ -2208,6 +2231,39 @@ function App() {
                   opacity: myClubRevealT,
                 }}
               />
+
+              {/* connector line down from my_club to players (row 3),
+                  same column (left: 225, center of the row 1/2/3 column) */}
+              <div
+                style={{
+                  position: 'absolute',
+                  top: ROW_HEIGHT + IMAGE_HEIGHT, // my_club's bottom edge
+                  left: 225,
+                  width: 2,
+                  height: lerp(0, IMAGE_GAP, playersLineT),
+                  backgroundColor: 'rgba(255, 255, 255, 0.6)',
+                  zIndex: 2,
+                }}
+              />
+
+              {/* players screenshot — row 3, same left edge as my_club and
+                  sbc_home_page. Waits until the camera has finished
+                  panning and the connector line above has fully grown. */}
+              <img
+                src={players}
+                alt=""
+                width={450}
+                style={{
+                  position: 'absolute',
+                  top: ROW_HEIGHT * 2,
+                  left: 0,
+                  width: 450,
+                  height: 'auto',
+                  zIndex: 2,
+                  opacity: playersRevealT,
+                }}
+              />
+              </div>
             </div>
 
             {/* guiding grid — sits behind the animation (z-0, vs the
