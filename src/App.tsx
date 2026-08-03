@@ -1015,20 +1015,20 @@ function App() {
   // continuous vertical-only camera pan: no horizontal panning — each row
   // is 450px wide same as the canvas, so column 1 and column 2 are both
   // already roughly centered horizontally without any help. Vertically,
-  // instead of shifting by a flat ROW_HEIGHT per row (which just
-  // top-aligns the new row), this pans so the CURRENT row's own center
-  // lands on the canvas's vertical center (CANVAS_CENTER_Y) — so whatever
-  // just spawned ends up roughly centered in the y-axis. Pans start as
-  // soon as the next row is introduced and finish just before that row's
-  // own reveal, same slow/continuous feel as before.
+  // this is ONE single continuous ramp — not separate pans per row
+  // transition — from 0 (row 1's resting position) to rowCenterOffset(3)
+  // (row 3's center on the canvas's vertical center), running at a single
+  // constant speed across its whole span (VLINE_END, when row 2 is
+  // introduced, through to PLAYERS_LINE_END, just before row 3's reveal).
+  // Splitting this into separate per-row pans previously gave each
+  // segment a different distance/duration ratio, so the scroll sped up
+  // and slowed down at each row boundary — a single lerp guarantees a
+  // constant rate throughout.
   const CANVAS_CENTER_Y = 280; // half of the canvas's 560px height
   const rowCenterOffset = (rowIndex: number) =>
     ROW_HEIGHT * (rowIndex - 1) + IMAGE_HEIGHT / 2 - CANVAS_CENTER_Y;
-  const panToRow2T = clamp01((outroT - VLINE_END) / (MY_CLUB_END - VLINE_END));
-  const panToRow3T = clamp01((outroT - MY_CLUB_END) / (PLAYERS_LINE_END - MY_CLUB_END));
-  const cameraOffsetY =
-    rowCenterOffset(2) * panToRow2T +
-    (rowCenterOffset(3) - rowCenterOffset(2)) * panToRow3T;
+  const scrollT = clamp01((outroT - VLINE_END) / (PLAYERS_LINE_END - VLINE_END));
+  const cameraOffsetY = lerp(0, rowCenterOffset(3), scrollT);
   // outgoing content rises the same distance (520px) over the same baseT
   // range as the base SVG above (both driven by baseT, not raw outroT),
   // so the two stay synced/matched-rate through the whole exit
