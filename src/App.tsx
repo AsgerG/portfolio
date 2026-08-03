@@ -845,18 +845,13 @@ const ROW4_LABEL_Y = ROW4_Y - LABEL_OFFSET;
 const ROW5_LABEL_Y = ROW5_Y - LABEL_OFFSET;
 const rowLabels = ['background', 'text', 'button', 'chip', 'tag'];
 
-const paragraphs = [
-  'Placeholder text goes here. Replace this with the first thing you want people to read as they scroll.',
-  'A second block of placeholder copy. This is where the story continues while the visual stays put.',
-  'Then the white circle slides right, and the full greyscale spawns in behind it.',
-  'Blue takes a step right, and a few shades of blue spawn in around it.',
-  'The teal row and the purple circle unfold together underneath it.',
-  'Finally, the signal group spawns in with green and red.',
-  'Then black, #1A1E23, and #333A42 regroup into the first row of five.',
-  'Row two gathers #9CA6B2, #D4D8DE, and white.',
-  'Row three gathers blue, teal, #545F6D, and a duplicate of #333A42.',
-  'Row four is just #0C4A6E on its own.',
-  'Row five closes it out with #4338CA, green, and red.',
+// case-study copy, one block per animation section — see sectionName
+// below for how the boundaries line up with the scroll timeline
+const sectionCopy = [
+  `EasySBC needed a strong brand feel — something technical enough to match the calculations running underneath it. The interface also had to handle dense data tables and colorful EA artwork without turning cluttered, so I built around a dark blue-grey base that let those colors do the talking. It also happens to suit the low-light conditions most players use when grinding FIFA at night. Blue anchors the palette to match the logo, with an analogous scheme built around it — teal and purple — leaving green and red free for their classic job: clear, unambiguous signal colors.`,
+  `As a third-party tool, EasySBC lives or dies on recognizability — a player needs to glance at a stat on the site and instantly know which in-game attribute it maps to. EA also reshuffles its own color coding almost every FC edition, so a handful of colors were deliberately built into the palette as known temporary placeholders — flagged from day one as due for revision, rather than treated as permanent parts of the system.`,
+  `Every component was checked against the same bar: color contrast, colorblindness, sizing, and SEO compliance. Those checks became a living set of guidelines — exactly where and how each color and element was allowed to be used, so the system stayed consistent as it grew.`,
+  `Wireframes were part of the process from day one of the MVP. Through every iteration, the goal stayed the same: a consistent design that felt intuitive and quietly guided the user, rather than one that demanded their attention.`,
 ];
 
 function App() {
@@ -1140,7 +1135,7 @@ function App() {
       : progress < 0.85 * TIMELINE_SCALE
         ? 'Part 2: Color semantics'
         : progress < TIMELINE_SCALE
-          ? 'Part 3: UI complains'
+          ? 'Part 3: UI components'
           : 'Part 4: Wireframes & overview';
 
   return (
@@ -2647,10 +2642,22 @@ function App() {
           </div>
         </div>
 
-        <div className="flex flex-col gap-[40vh] py-[40vh] px-12 text-white/70 text-lg max-w-md">
-          {paragraphs.map((text) => (
-            <p key={text}>{text}</p>
-          ))}
+        {/* case-study copy, one block per section, spaced so each block's
+            position roughly lines up with when its section is active
+            (section boundaries: 0.475, 0.8075, 0.95 of total progress —
+            see sectionName above). These are estimates based on the
+            timeline's stage boundaries, not pixel-measured against a live
+            preview, so the exact spacing may need a follow-up pass once
+            it can be checked in the browser. */}
+        <div className="flex flex-col px-12 text-white/70 text-lg max-w-md">
+          <div style={{ height: '120vh' }} aria-hidden />
+          <p>{sectionCopy[0]}</p>
+          <div style={{ height: '200vh' }} aria-hidden />
+          <p>{sectionCopy[1]}</p>
+          <div style={{ height: '115vh' }} aria-hidden />
+          <p>{sectionCopy[2]}</p>
+          <div style={{ height: '50vh' }} aria-hidden />
+          <p>{sectionCopy[3]}</p>
           {/* trailing buffer: without this, the sticky canvas unsticks and
               starts scrolling away the instant progress hits 1 (there's no
               container height left to keep it pinned), cutting the outro
