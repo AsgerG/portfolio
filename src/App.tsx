@@ -1129,12 +1129,27 @@ function App() {
     '#F83959': stageRow5,
   };
 
+  // four named sections across the whole scroll, for the readout next to
+  // the progress counter below — boundaries line up with existing stage
+  // transitions (colors finish spawning at 0.5*TIMELINE_SCALE, morph into
+  // shapes by 0.85*TIMELINE_SCALE, stack into components by
+  // TIMELINE_SCALE, then the outro takes over for the rest)
+  const sectionName =
+    progress < 0.5 * TIMELINE_SCALE
+      ? 'Part 1: Color palette'
+      : progress < 0.85 * TIMELINE_SCALE
+        ? 'Part 2: Color semantics'
+        : progress < TIMELINE_SCALE
+          ? 'Part 3: UI complains'
+          : 'Part 4: Wireframes & overview';
+
   return (
     <div className="bg-[#15181D]">
       {/* live scroll-progress readout, fixed to the viewport, for lining
           up which stage of the timeline we're talking about while polishing */}
-      <div className="fixed top-4 left-4 z-50 font-mono text-xs text-white/70 bg-black/50 px-2 py-1 rounded pointer-events-none">
-        {progress.toFixed(3)}
+      <div className="fixed top-4 left-4 z-50 flex items-center gap-2 font-mono text-xs text-white/70 pointer-events-none">
+        <span className="bg-black/50 px-2 py-1 rounded">{progress.toFixed(3)}</span>
+        <span className="bg-black/50 px-2 py-1 rounded">{sectionName}</span>
       </div>
       <div ref={ref} className="grid grid-cols-2">
         <div className="sticky top-0 h-screen flex items-center justify-center">
