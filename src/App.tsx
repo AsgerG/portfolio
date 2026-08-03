@@ -9,6 +9,7 @@ import detailedPlayerView from './assets/detailed_player_view.png';
 import evolutions from './assets/evolutions.png';
 import evolutionBuilder from './assets/evolution_builder.png';
 import tactics from './assets/tactics.png';
+import squadBuilder from './assets/squad_builder.png';
 
 // drives smooth/eased scrolling site-wide. Lenis animates the native scroll
 // position itself (window.scrollTo under the hood), so it still dispatches
@@ -977,42 +978,47 @@ function App() {
   // converging on evolution_builder's position (builderLinesT) ->
   // evolution_builder fades in where they meet (evolutionBuilderRevealT)
   // -> a connector line grows down from evolutions (tacticsLineT) ->
-  // tactics fades in underneath it (tacticsRevealT). The vertical camera
-  // pan (cameraOffsetY, below) is NOT one of these discrete stages — it's
-  // a separate, continuous ramp that starts as soon as the next row is
-  // introduced and finishes just before that row's own reveal, so each
-  // row ends up roughly centered (in y) in the canvas as it spawns. No
-  // horizontal panning — each column is already about canvas-width, so
-  // both columns read as centered without any help. (Pacing across all
-  // these stages will get a proper pass later — this is just wiring up
-  // the next image for now.)
+  // tactics fades in underneath it (tacticsRevealT) -> two more connector
+  // lines grow at once — one right from tactics, one down from
+  // evolution_builder — both converging on squad_builder's position
+  // (squadBuilderLinesT) -> squad_builder fades in where they meet
+  // (squadBuilderRevealT). The vertical camera pan (cameraOffsetY, below)
+  // is NOT one of these discrete stages — it's a separate, continuous
+  // ramp that starts as soon as the next row is introduced and finishes
+  // just before that row's own reveal, so each row ends up roughly
+  // centered (in y) in the canvas as it spawns. No horizontal panning —
+  // each column is already about canvas-width, so both columns read as
+  // centered without any help. (Pacing across all these stages will get a
+  // proper pass later — this is just wiring up the next image for now.)
   const outroT = clamp01((progress - TIMELINE_SCALE) / (1 - TIMELINE_SCALE));
-  const BASE_SVG_END = 0.094; // outroT 0       -> 0.094: base SVG
-  const DETAIL_SVG_END = 0.162; // outroT 0.094  -> 0.162: detail SVG
-  const HOME_PAGE_END = 0.239; // outroT 0.162   -> 0.239: home-page image
-  const LINE_END = 0.265; // outroT 0.239        -> 0.265: horizontal connector line
-  const SET_PAGE_END = 0.342; // outroT 0.265    -> 0.342: set-page image
-  const VLINE_END = 0.368; // outroT 0.342       -> 0.368: vertical connector line
+  const BASE_SVG_END = 0.089; // outroT 0       -> 0.089: base SVG
+  const DETAIL_SVG_END = 0.154; // outroT 0.089  -> 0.154: detail SVG
+  const HOME_PAGE_END = 0.227; // outroT 0.154   -> 0.227: home-page image
+  const LINE_END = 0.252; // outroT 0.227        -> 0.252: horizontal connector line
+  const SET_PAGE_END = 0.325; // outroT 0.252    -> 0.325: set-page image
+  const VLINE_END = 0.35; // outroT 0.325        -> 0.35: vertical connector line
   // (also where the continuous vertical camera pan begins — see cameraOffsetY below)
-  const SOLUTION_VIEW_END = 0.436; // outroT 0.368 -> 0.436: solution-view image
-  const CONVERGE_LINES_END = 0.487; // outroT 0.436 -> 0.487: the two lines to my_club
-  const MY_CLUB_END = 0.539; // outroT 0.487     -> 0.539: my_club image
-  const PLAYERS_LINE_END = 0.607; // outroT 0.539 -> 0.607: connector line down from my_club
-  const PLAYERS_END = 0.675; // outroT 0.607     -> 0.675: players image
-  const DETAIL_LINE_END = 0.71; // outroT 0.675  -> 0.71: connector line right from players
-  const DETAILED_PLAYER_VIEW_END = 0.787; // outroT 0.71 -> 0.787: detailed_player_view image
-  const EVOLUTIONS_LINE_END = 0.821; // outroT 0.787 -> 0.821: connector line down from players
-  const EVOLUTIONS_END = 0.884; // outroT 0.821 -> 0.884: evolutions image
-  const BUILDER_LINES_END = 0.922; // outroT 0.884 -> 0.922: the two lines to evolution_builder
-  const EVOLUTION_BUILDER_END = 0.96; // outroT 0.922 -> 0.96: evolution_builder image
-  const TACTICS_LINE_END = 0.98; // outroT 0.96 -> 0.98: connector line down from evolutions
+  const SOLUTION_VIEW_END = 0.414; // outroT 0.35 -> 0.414: solution-view image
+  const CONVERGE_LINES_END = 0.463; // outroT 0.414 -> 0.463: the two lines to my_club
+  const MY_CLUB_END = 0.512; // outroT 0.463     -> 0.512: my_club image
+  const PLAYERS_LINE_END = 0.577; // outroT 0.512 -> 0.577: connector line down from my_club
+  const PLAYERS_END = 0.641; // outroT 0.577     -> 0.641: players image
+  const DETAIL_LINE_END = 0.675; // outroT 0.641 -> 0.675: connector line right from players
+  const DETAILED_PLAYER_VIEW_END = 0.748; // outroT 0.675 -> 0.748: detailed_player_view image
+  const EVOLUTIONS_LINE_END = 0.78; // outroT 0.748 -> 0.78: connector line down from players
+  const EVOLUTIONS_END = 0.84; // outroT 0.78  -> 0.84: evolutions image
+  const BUILDER_LINES_END = 0.876; // outroT 0.84 -> 0.876: the two lines to evolution_builder
+  const EVOLUTION_BUILDER_END = 0.912; // outroT 0.876 -> 0.912: evolution_builder image
+  const TACTICS_LINE_END = 0.931; // outroT 0.912 -> 0.931: connector line down from evolutions
   // (also where the continuous camera pan finishes)
-  // outroT 0.98 -> 1: tactics image
+  const TACTICS_END = 0.96; // outroT 0.931 -> 0.96: tactics image
+  const SQUAD_BUILDER_LINES_END = 0.98; // outroT 0.96 -> 0.98: the two lines to squad_builder
+  // outroT 0.98 -> 1: squad_builder image
   const IMAGE_GAP = 50; // px gap between images, reused for every gap
   const IMAGE_HEIGHT = 308.25; // rendered height of the 450px-wide 1200x822
   // screenshots (sbc_set_page, solution_view, my_club, players,
-  // detailed_player_view, evolutions, evolution_builder, tactics) at that
-  // aspect ratio
+  // detailed_player_view, evolutions, evolution_builder, tactics,
+  // squad_builder) at that aspect ratio
   const ROW_HEIGHT = IMAGE_HEIGHT + IMAGE_GAP; // vertical spacing between rows
   const baseT = clamp01(outroT / BASE_SVG_END);
   const REVEAL_Y_START = 600; // illustration's own y position: travels from
@@ -1046,7 +1052,13 @@ function App() {
   const tacticsLineT = clamp01(
     (outroT - EVOLUTION_BUILDER_END) / (TACTICS_LINE_END - EVOLUTION_BUILDER_END),
   );
-  const tacticsRevealT = clamp01((outroT - TACTICS_LINE_END) / (1 - TACTICS_LINE_END));
+  const tacticsRevealT = clamp01((outroT - TACTICS_LINE_END) / (TACTICS_END - TACTICS_LINE_END));
+  const squadBuilderLinesT = clamp01(
+    (outroT - TACTICS_END) / (SQUAD_BUILDER_LINES_END - TACTICS_END),
+  );
+  const squadBuilderRevealT = clamp01(
+    (outroT - SQUAD_BUILDER_LINES_END) / (1 - SQUAD_BUILDER_LINES_END),
+  );
   // continuous vertical-only camera pan: no horizontal panning — each row
   // is 450px wide same as the canvas, so column 1 and column 2 are both
   // already roughly centered horizontally without any help. Vertically,
@@ -2468,6 +2480,51 @@ function App() {
                   height: 'auto',
                   zIndex: 2,
                   opacity: tacticsRevealT,
+                }}
+              />
+
+              {/* two connector lines growing at once, converging on
+                  squad_builder's position (row 5, column 2): one right
+                  from tactics, one down from evolution_builder */}
+              <div
+                style={{
+                  position: 'absolute',
+                  top: ROW_HEIGHT * 4 + IMAGE_HEIGHT / 2,
+                  left: 450, // tactics' right edge
+                  width: lerp(0, IMAGE_GAP, squadBuilderLinesT),
+                  height: 2,
+                  backgroundColor: 'rgba(255, 255, 255, 0.6)',
+                  zIndex: 2,
+                }}
+              />
+              <div
+                style={{
+                  position: 'absolute',
+                  top: ROW_HEIGHT * 3 + IMAGE_HEIGHT, // evolution_builder's bottom edge
+                  left: 725, // center of column 2 (500 + 225)
+                  width: 2,
+                  height: lerp(0, IMAGE_GAP, squadBuilderLinesT),
+                  backgroundColor: 'rgba(255, 255, 255, 0.6)',
+                  zIndex: 2,
+                }}
+              />
+
+              {/* squad_builder screenshot — row 5, column 2, same left
+                  edge as sbc_set_page/solution_view/detailed_player_view/
+                  evolution_builder. Waits until both lines above have
+                  fully grown before it starts fading in. */}
+              <img
+                src={squadBuilder}
+                alt=""
+                width={450}
+                style={{
+                  position: 'absolute',
+                  top: ROW_HEIGHT * 4,
+                  left: 500,
+                  width: 450,
+                  height: 'auto',
+                  zIndex: 2,
+                  opacity: squadBuilderRevealT,
                 }}
               />
               </div>
