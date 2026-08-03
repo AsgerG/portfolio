@@ -949,19 +949,22 @@ function App() {
   const check2Local = clamp01((checksT - 1 / 3) / (1 / 3));
   const check3Local = clamp01((checksT - 2 / 3) / (1 / 3));
 
-  // outro is split into four back-to-back parts of outroT: first the base
-  // SVG stays hidden until it starts moving, then moves + fades in
-  // together (baseT). Only once it's fully stopped and fully visible does
-  // the detailed SVG start its own fade-in (detailRevealT). Only once
-  // *that's* fully visible does the home-page image fade in
-  // (homePageRevealT), and only once THAT's fully visible does the
-  // set-page image fade in beside it (setPageRevealT) — each stage waits
-  // for the previous one to completely finish before it spawns.
+  // outro is split into five back-to-back parts of outroT: base SVG spawns
+  // and moves (baseT), then the detailed SVG fades in on top of it once
+  // that's settled (detailRevealT), then the home-page image fades in once
+  // that's fully visible (homePageRevealT). Then, instead of the set-page
+  // image just appearing, a connector line grows from the home-page
+  // image's right edge across the 50px gap (lineT) — only once the line
+  // has fully reached the set-page image's position does that image start
+  // fading in (setPageRevealT). Each stage waits for the previous one to
+  // completely finish before it starts.
   const outroT = clamp01((progress - TIMELINE_SCALE) / (1 - TIMELINE_SCALE));
-  const BASE_SVG_END = 0.3; // outroT 0    -> 0.3:  base SVG
-  const DETAIL_SVG_END = 0.55; // outroT 0.3 -> 0.55: detail SVG
-  const HOME_PAGE_END = 0.8; // outroT 0.55 -> 0.8: home-page image
-  // outroT 0.8 -> 1: set-page image
+  const BASE_SVG_END = 0.25; // outroT 0     -> 0.25: base SVG
+  const DETAIL_SVG_END = 0.45; // outroT 0.25 -> 0.45: detail SVG
+  const HOME_PAGE_END = 0.65; // outroT 0.45  -> 0.65: home-page image
+  const LINE_END = 0.78; // outroT 0.65       -> 0.78: connector line grows
+  // outroT 0.78 -> 1: set-page image
+  const IMAGE_GAP = 50; // px gap between sbc_home_page and sbc_set_page
   const baseT = clamp01(outroT / BASE_SVG_END);
   const REVEAL_Y_START = 600; // illustration's own y position: travels from
   const REVEAL_Y_END = 80; // 600 (below the canvas) up to 80 (near the top)
@@ -969,7 +972,8 @@ function App() {
   const revealT = baseT;
   const detailRevealT = clamp01((outroT - BASE_SVG_END) / (DETAIL_SVG_END - BASE_SVG_END));
   const homePageRevealT = clamp01((outroT - DETAIL_SVG_END) / (HOME_PAGE_END - DETAIL_SVG_END));
-  const setPageRevealT = clamp01((outroT - HOME_PAGE_END) / (1 - HOME_PAGE_END));
+  const lineT = clamp01((outroT - HOME_PAGE_END) / (LINE_END - HOME_PAGE_END));
+  const setPageRevealT = clamp01((outroT - LINE_END) / (1 - LINE_END));
   // outgoing content rises the same distance (520px) over the same baseT
   // range as the base SVG above (both driven by baseT, not raw outroT),
   // so the two stay synced/matched-rate through the whole exit
@@ -2071,10 +2075,27 @@ function App() {
                 }}
               />
 
-              {/* set-page screenshot — same 450px width, positioned right
-                  where sbc_home_page leaves off (left: 450), so it sits
-                  immediately to its right. Waits until the home-page image
-                  is fully visible before it starts fading in. */}
+              {/* connector line — grows from sbc_home_page's right edge
+                  (x=450) across the 50px gap toward sbc_set_page's left
+                  edge, vertically centered on the images (~154, half of
+                  their ~308px rendered height). Once it's fully grown, the
+                  set-page image below starts fading in. */}
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 154,
+                  left: 450,
+                  width: lerp(0, IMAGE_GAP, lineT),
+                  height: 2,
+                  backgroundColor: 'rgba(255, 255, 255, 0.6)',
+                  zIndex: 2,
+                }}
+              />
+
+              {/* set-page screenshot — same 450px width, positioned with a
+                  50px gap (IMAGE_GAP) after sbc_home_page. Waits until the
+                  connector line above has fully reached its position
+                  before it starts fading in. */}
               <img
                 src={sbcSetPage}
                 alt=""
@@ -2082,7 +2103,7 @@ function App() {
                 style={{
                   position: 'absolute',
                   top: 0,
-                  left: 450,
+                  left: 450 + IMAGE_GAP,
                   width: 450,
                   height: 'auto',
                   zIndex: 2,
