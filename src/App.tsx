@@ -6,6 +6,7 @@ import solutionView from './assets/solution_view.png';
 import myClub from './assets/my_club.png';
 import players from './assets/players.png';
 import detailedPlayerView from './assets/detailed_player_view.png';
+import evolutions from './assets/evolutions.png';
 
 // drives smooth/eased scrolling site-wide. Lenis animates the native scroll
 // position itself (window.scrollTo under the hood), so it still dispatches
@@ -967,33 +968,38 @@ function App() {
   // my_club (playersLineT) -> players fades in underneath it
   // (playersRevealT) -> a horizontal connector line grows right from
   // players (detailLineT) -> detailed_player_view fades in beside it
-  // (detailedPlayerViewRevealT). The vertical camera pan (cameraOffsetY,
-  // below) is NOT one of these discrete stages — it's a separate,
-  // continuous ramp that starts as soon as the next row is introduced and
-  // finishes just before that row's own reveal, so each row ends up
-  // roughly centered (in y) in the canvas as it spawns. No horizontal
-  // panning — each column is already about canvas-width, so both columns
-  // read as centered without any help.
+  // (detailedPlayerViewRevealT) -> a connector line grows down from
+  // players (evolutionsLineT) -> evolutions fades in underneath it
+  // (evolutionsRevealT). The vertical camera pan (cameraOffsetY, below) is
+  // NOT one of these discrete stages — it's a separate, continuous ramp
+  // that starts as soon as the next row is introduced and finishes just
+  // before that row's own reveal, so each row ends up roughly centered
+  // (in y) in the canvas as it spawns. No horizontal panning — each
+  // column is already about canvas-width, so both columns read as
+  // centered without any help. (Pacing across all these stages will get a
+  // proper pass later — this is just wiring up the next image for now.)
   const outroT = clamp01((progress - TIMELINE_SCALE) / (1 - TIMELINE_SCALE));
-  const BASE_SVG_END = 0.12; // outroT 0      -> 0.12: base SVG
-  const DETAIL_SVG_END = 0.21; // outroT 0.12  -> 0.21: detail SVG
-  const HOME_PAGE_END = 0.3; // outroT 0.21    -> 0.3:  home-page image
-  const LINE_END = 0.34; // outroT 0.3         -> 0.34: horizontal connector line
-  const SET_PAGE_END = 0.43; // outroT 0.34    -> 0.43: set-page image
-  const VLINE_END = 0.47; // outroT 0.43       -> 0.47: vertical connector line
+  const BASE_SVG_END = 0.11; // outroT 0      -> 0.11: base SVG
+  const DETAIL_SVG_END = 0.19; // outroT 0.11  -> 0.19: detail SVG
+  const HOME_PAGE_END = 0.28; // outroT 0.19   -> 0.28: home-page image
+  const LINE_END = 0.31; // outroT 0.28        -> 0.31: horizontal connector line
+  const SET_PAGE_END = 0.4; // outroT 0.31     -> 0.4:  set-page image
+  const VLINE_END = 0.43; // outroT 0.4        -> 0.43: vertical connector line
   // (also where the continuous vertical camera pan begins — see cameraOffsetY below)
-  const SOLUTION_VIEW_END = 0.56; // outroT 0.47 -> 0.56: solution-view image
-  const CONVERGE_LINES_END = 0.62; // outroT 0.56 -> 0.62: the two lines to my_club
-  const MY_CLUB_END = 0.69; // outroT 0.62     -> 0.69: my_club image
-  const PLAYERS_LINE_END = 0.79; // outroT 0.69 -> 0.79: connector line down from my_club
+  const SOLUTION_VIEW_END = 0.51; // outroT 0.43 -> 0.51: solution-view image
+  const CONVERGE_LINES_END = 0.57; // outroT 0.51 -> 0.57: the two lines to my_club
+  const MY_CLUB_END = 0.63; // outroT 0.57     -> 0.63: my_club image
+  const PLAYERS_LINE_END = 0.71; // outroT 0.63 -> 0.71: connector line down from my_club
+  const PLAYERS_END = 0.79; // outroT 0.71     -> 0.79: players image
+  const DETAIL_LINE_END = 0.83; // outroT 0.79 -> 0.83: connector line right from players
+  const DETAILED_PLAYER_VIEW_END = 0.92; // outroT 0.83 -> 0.92: detailed_player_view image
+  const EVOLUTIONS_LINE_END = 0.96; // outroT 0.92 -> 0.96: connector line down from players
   // (also where the continuous camera pan finishes)
-  const PLAYERS_END = 0.88; // outroT 0.79     -> 0.88: players image
-  const DETAIL_LINE_END = 0.93; // outroT 0.88 -> 0.93: connector line right from players
-  // outroT 0.93 -> 1: detailed_player_view image
+  // outroT 0.96 -> 1: evolutions image
   const IMAGE_GAP = 50; // px gap between images, reused for every gap
   const IMAGE_HEIGHT = 308.25; // rendered height of the 450px-wide 1200x822
   // screenshots (sbc_set_page, solution_view, my_club, players,
-  // detailed_player_view) at that aspect ratio
+  // detailed_player_view, evolutions) at that aspect ratio
   const ROW_HEIGHT = IMAGE_HEIGHT + IMAGE_GAP; // vertical spacing between rows
   const baseT = clamp01(outroT / BASE_SVG_END);
   const REVEAL_Y_START = 600; // illustration's own y position: travels from
@@ -1011,24 +1017,32 @@ function App() {
   const playersLineT = clamp01((outroT - MY_CLUB_END) / (PLAYERS_LINE_END - MY_CLUB_END));
   const playersRevealT = clamp01((outroT - PLAYERS_LINE_END) / (PLAYERS_END - PLAYERS_LINE_END));
   const detailLineT = clamp01((outroT - PLAYERS_END) / (DETAIL_LINE_END - PLAYERS_END));
-  const detailedPlayerViewRevealT = clamp01((outroT - DETAIL_LINE_END) / (1 - DETAIL_LINE_END));
+  const detailedPlayerViewRevealT = clamp01(
+    (outroT - DETAIL_LINE_END) / (DETAILED_PLAYER_VIEW_END - DETAIL_LINE_END),
+  );
+  const evolutionsLineT = clamp01(
+    (outroT - DETAILED_PLAYER_VIEW_END) / (EVOLUTIONS_LINE_END - DETAILED_PLAYER_VIEW_END),
+  );
+  const evolutionsRevealT = clamp01((outroT - EVOLUTIONS_LINE_END) / (1 - EVOLUTIONS_LINE_END));
   // continuous vertical-only camera pan: no horizontal panning — each row
   // is 450px wide same as the canvas, so column 1 and column 2 are both
   // already roughly centered horizontally without any help. Vertically,
   // this is ONE single continuous ramp — not separate pans per row
-  // transition — from 0 (row 1's resting position) to rowCenterOffset(3)
-  // (row 3's center on the canvas's vertical center), running at a single
+  // transition — from 0 (row 1's resting position) to rowCenterOffset(4)
+  // (row 4's center on the canvas's vertical center), running at a single
   // constant speed across its whole span (VLINE_END, when row 2 is
-  // introduced, through to PLAYERS_LINE_END, just before row 3's reveal).
-  // Splitting this into separate per-row pans previously gave each
-  // segment a different distance/duration ratio, so the scroll sped up
-  // and slowed down at each row boundary — a single lerp guarantees a
-  // constant rate throughout.
+  // introduced, through to EVOLUTIONS_LINE_END, just before row 4's
+  // reveal). Splitting this into separate per-row pans previously gave
+  // each segment a different distance/duration ratio, so the scroll sped
+  // up and slowed down at each row boundary — a single lerp guarantees a
+  // constant rate throughout (though now that it covers 3 row-transitions
+  // instead of 2, the overall rate itself will feel different again —
+  // that's the pacing pass we're deferring for now).
   const CANVAS_CENTER_Y = 280; // half of the canvas's 560px height
   const rowCenterOffset = (rowIndex: number) =>
     ROW_HEIGHT * (rowIndex - 1) + IMAGE_HEIGHT / 2 - CANVAS_CENTER_Y;
-  const scrollT = clamp01((outroT - VLINE_END) / (PLAYERS_LINE_END - VLINE_END));
-  const cameraOffsetY = lerp(0, rowCenterOffset(3), scrollT);
+  const scrollT = clamp01((outroT - VLINE_END) / (EVOLUTIONS_LINE_END - VLINE_END));
+  const cameraOffsetY = lerp(0, rowCenterOffset(4), scrollT);
   // outgoing content rises the same distance (520px) over the same baseT
   // range as the base SVG above (both driven by baseT, not raw outroT),
   // so the two stay synced/matched-rate through the whole exit
@@ -2321,6 +2335,38 @@ function App() {
                   height: 'auto',
                   zIndex: 2,
                   opacity: detailedPlayerViewRevealT,
+                }}
+              />
+
+              {/* connector line down from players to evolutions (row 4),
+                  same column (left: 225, center of the column-1 images) */}
+              <div
+                style={{
+                  position: 'absolute',
+                  top: ROW_HEIGHT * 2 + IMAGE_HEIGHT, // players' bottom edge
+                  left: 225,
+                  width: 2,
+                  height: lerp(0, IMAGE_GAP, evolutionsLineT),
+                  backgroundColor: 'rgba(255, 255, 255, 0.6)',
+                  zIndex: 2,
+                }}
+              />
+
+              {/* evolutions screenshot — row 4, same left edge as players/
+                  my_club/sbc_home_page. Waits until the connector line
+                  above has fully grown before it starts fading in. */}
+              <img
+                src={evolutions}
+                alt=""
+                width={450}
+                style={{
+                  position: 'absolute',
+                  top: ROW_HEIGHT * 3,
+                  left: 0,
+                  width: 450,
+                  height: 'auto',
+                  zIndex: 2,
+                  opacity: evolutionsRevealT,
                 }}
               />
               </div>
