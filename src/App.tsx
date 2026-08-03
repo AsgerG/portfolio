@@ -996,31 +996,40 @@ function App() {
   // centered without any help. (Pacing across all these stages will get a
   // proper pass later — this is just wiring up the next image for now.)
   const outroT = clamp01((progress - TIMELINE_SCALE) / (1 - TIMELINE_SCALE));
-  const BASE_SVG_END = 0.085; // outroT 0       -> 0.085: base SVG
-  const DETAIL_SVG_END = 0.146; // outroT 0.085  -> 0.146: detail SVG
-  const HOME_PAGE_END = 0.216; // outroT 0.146   -> 0.216: home-page image
-  const LINE_END = 0.239; // outroT 0.216        -> 0.239: horizontal connector line
-  const SET_PAGE_END = 0.309; // outroT 0.239    -> 0.309: set-page image
-  const VLINE_END = 0.333; // outroT 0.309       -> 0.333: vertical connector line
+  // every stage below now gets one of exactly two uniform durations: R
+  // (1/18 of outroT) for every image/SVG reveal, L (half of R, 1/36) for
+  // every connector-line growth — instead of durations that drifted
+  // further out of proportion each time a new row got squeezed in by
+  // rescaling everything that came before it. 13 reveal stages + 10 line
+  // stages, 13*R + 10*L = 13*R + 10*(R/2) = 18*R = 1, so every reveal
+  // takes the same slice of scroll as every other reveal, and every line
+  // takes the same slice as every other line, start to finish — that's
+  // what makes the scroll speed feel consistent all the way through.
+  const BASE_SVG_END = 0.0556; // outroT 0      -> 0.0556: base SVG
+  const DETAIL_SVG_END = 0.1111; // outroT 0.0556 -> 0.1111: detail SVG
+  const HOME_PAGE_END = 0.1667; // outroT 0.1111  -> 0.1667: home-page image
+  const LINE_END = 0.1944; // outroT 0.1667       -> 0.1944: horizontal connector line
+  const SET_PAGE_END = 0.25; // outroT 0.1944     -> 0.25: set-page image
+  const VLINE_END = 0.2778; // outroT 0.25        -> 0.2778: vertical connector line
   // (also where the continuous vertical camera pan begins — see cameraOffsetY below)
-  const SOLUTION_VIEW_END = 0.393; // outroT 0.333 -> 0.393: solution-view image
-  const CONVERGE_LINES_END = 0.44; // outroT 0.393 -> 0.44: the two lines to my_club
-  const MY_CLUB_END = 0.486; // outroT 0.44      -> 0.486: my_club image
-  const PLAYERS_LINE_END = 0.548; // outroT 0.486 -> 0.548: connector line down from my_club
-  const PLAYERS_END = 0.609; // outroT 0.548     -> 0.609: players image
-  const DETAIL_LINE_END = 0.641; // outroT 0.609 -> 0.641: connector line right from players
-  const DETAILED_PLAYER_VIEW_END = 0.711; // outroT 0.641 -> 0.711: detailed_player_view image
-  const EVOLUTIONS_LINE_END = 0.741; // outroT 0.711 -> 0.741: connector line down from players
-  const EVOLUTIONS_END = 0.798; // outroT 0.741 -> 0.798: evolutions image
-  const BUILDER_LINES_END = 0.832; // outroT 0.798 -> 0.832: the two lines to evolution_builder
-  const EVOLUTION_BUILDER_END = 0.866; // outroT 0.832 -> 0.866: evolution_builder image
-  const TACTICS_LINE_END = 0.884; // outroT 0.866 -> 0.884: connector line down from evolutions
-  const TACTICS_END = 0.912; // outroT 0.884 -> 0.912: tactics image
-  const SQUAD_BUILDER_LINES_END = 0.931; // outroT 0.912 -> 0.931: the two lines to squad_builder
-  const SQUAD_BUILDER_END = 0.96; // outroT 0.931 -> 0.96: squad_builder image
-  const ROW6_LINES_END = 0.98; // outroT 0.96 -> 0.98: lines down from tactics and squad_builder
+  const SOLUTION_VIEW_END = 0.3333; // outroT 0.2778 -> 0.3333: solution-view image
+  const CONVERGE_LINES_END = 0.3611; // outroT 0.3333 -> 0.3611: the two lines to my_club
+  const MY_CLUB_END = 0.4167; // outroT 0.3611    -> 0.4167: my_club image
+  const PLAYERS_LINE_END = 0.4444; // outroT 0.4167 -> 0.4444: connector line down from my_club
+  const PLAYERS_END = 0.5; // outroT 0.4444       -> 0.5: players image
+  const DETAIL_LINE_END = 0.5278; // outroT 0.5   -> 0.5278: connector line right from players
+  const DETAILED_PLAYER_VIEW_END = 0.5833; // outroT 0.5278 -> 0.5833: detailed_player_view image
+  const EVOLUTIONS_LINE_END = 0.6111; // outroT 0.5833 -> 0.6111: connector line down from players
+  const EVOLUTIONS_END = 0.6667; // outroT 0.6111 -> 0.6667: evolutions image
+  const BUILDER_LINES_END = 0.6944; // outroT 0.6667 -> 0.6944: the two lines to evolution_builder
+  const EVOLUTION_BUILDER_END = 0.75; // outroT 0.6944 -> 0.75: evolution_builder image
+  const TACTICS_LINE_END = 0.7778; // outroT 0.75 -> 0.7778: connector line down from evolutions
+  const TACTICS_END = 0.8333; // outroT 0.7778   -> 0.8333: tactics image
+  const SQUAD_BUILDER_LINES_END = 0.8611; // outroT 0.8333 -> 0.8611: the two lines to squad_builder
+  const SQUAD_BUILDER_END = 0.9167; // outroT 0.8611 -> 0.9167: squad_builder image
+  const ROW6_LINES_END = 0.9444; // outroT 0.9167 -> 0.9444: lines down from tactics and squad_builder
   // (also where the continuous camera pan finishes)
-  // outroT 0.98 -> 1: meta_rating_explainer + squad_tactics images (together)
+  // outroT 0.9444 -> 1: meta_rating_explainer + squad_tactics images (together)
   const IMAGE_GAP = 50; // px gap between images, reused for every gap
   const IMAGE_HEIGHT = 308.25; // rendered height of the 450px-wide 1200x822
   // screenshots (sbc_set_page, solution_view, my_club, players,
@@ -1030,7 +1039,7 @@ function App() {
   const ROW_HEIGHT = IMAGE_HEIGHT + IMAGE_GAP; // vertical spacing between rows
   const baseT = clamp01(outroT / BASE_SVG_END);
   const REVEAL_Y_START = 600; // illustration's own y position: travels from
-  const REVEAL_Y_END = 80; // 600 (below the canvas) up to 80 (near the top)
+  const REVEAL_Y_END = 140; // 600 (below the canvas) up to 140 (a bit lower than before)
   const revealY = lerp(REVEAL_Y_START, REVEAL_Y_END, baseT);
   const revealT = baseT;
   const detailRevealT = clamp01((outroT - BASE_SVG_END) / (DETAIL_SVG_END - BASE_SVG_END));
@@ -1080,9 +1089,10 @@ function App() {
   // reveal). Splitting this into separate per-row pans previously gave
   // each segment a different distance/duration ratio, so the scroll sped
   // up and slowed down at each row boundary — a single lerp guarantees a
-  // constant rate throughout (though now that it covers 5 row-transitions
-  // instead of 4, the overall rate itself will feel different again —
-  // that's the pacing pass we're deferring for now).
+  // constant rate throughout. Combined with the now-uniform stage
+  // durations above (every reveal same length, every line-growth same
+  // length), the whole outro should now feel like one consistent scroll
+  // speed start to finish.
   const CANVAS_CENTER_Y = 280; // half of the canvas's 560px height
   const rowCenterOffset = (rowIndex: number) =>
     ROW_HEIGHT * (rowIndex - 1) + IMAGE_HEIGHT / 2 - CANVAS_CENTER_Y;
@@ -2194,6 +2204,7 @@ function App() {
                   height: 'auto',
                   zIndex: 2,
                   opacity: homePageRevealT,
+                  filter: 'drop-shadow(0px 4px 8px rgba(0, 0, 0, 0.3))',
                 }}
               />
 
@@ -2230,6 +2241,7 @@ function App() {
                   height: 'auto',
                   zIndex: 2,
                   opacity: setPageRevealT,
+                  filter: 'drop-shadow(0px 4px 8px rgba(0, 0, 0, 0.3))',
                 }}
               />
 
@@ -2266,6 +2278,7 @@ function App() {
                   height: 'auto',
                   zIndex: 2,
                   opacity: solutionViewRevealT,
+                  filter: 'drop-shadow(0px 4px 8px rgba(0, 0, 0, 0.3))',
                 }}
               />
 
@@ -2314,6 +2327,7 @@ function App() {
                   height: 'auto',
                   zIndex: 2,
                   opacity: myClubRevealT,
+                  filter: 'drop-shadow(0px 4px 8px rgba(0, 0, 0, 0.3))',
                 }}
               />
 
@@ -2346,6 +2360,7 @@ function App() {
                   height: 'auto',
                   zIndex: 2,
                   opacity: playersRevealT,
+                  filter: 'drop-shadow(0px 4px 8px rgba(0, 0, 0, 0.3))',
                 }}
               />
 
@@ -2380,6 +2395,7 @@ function App() {
                   height: 'auto',
                   zIndex: 2,
                   opacity: detailedPlayerViewRevealT,
+                  filter: 'drop-shadow(0px 4px 8px rgba(0, 0, 0, 0.3))',
                 }}
               />
 
@@ -2412,6 +2428,7 @@ function App() {
                   height: 'auto',
                   zIndex: 2,
                   opacity: evolutionsRevealT,
+                  filter: 'drop-shadow(0px 4px 8px rgba(0, 0, 0, 0.3))',
                 }}
               />
 
@@ -2458,6 +2475,7 @@ function App() {
                   height: 'auto',
                   zIndex: 2,
                   opacity: evolutionBuilderRevealT,
+                  filter: 'drop-shadow(0px 4px 8px rgba(0, 0, 0, 0.3))',
                 }}
               />
 
@@ -2490,6 +2508,7 @@ function App() {
                   height: 'auto',
                   zIndex: 2,
                   opacity: tacticsRevealT,
+                  filter: 'drop-shadow(0px 4px 8px rgba(0, 0, 0, 0.3))',
                 }}
               />
 
@@ -2535,6 +2554,7 @@ function App() {
                   height: 'auto',
                   zIndex: 2,
                   opacity: squadBuilderRevealT,
+                  filter: 'drop-shadow(0px 4px 8px rgba(0, 0, 0, 0.3))',
                 }}
               />
 
@@ -2579,6 +2599,7 @@ function App() {
                   height: 'auto',
                   zIndex: 2,
                   opacity: row6RevealT,
+                  filter: 'drop-shadow(0px 4px 8px rgba(0, 0, 0, 0.3))',
                 }}
               />
 
@@ -2597,6 +2618,7 @@ function App() {
                   height: 'auto',
                   zIndex: 2,
                   opacity: row6RevealT,
+                  filter: 'drop-shadow(0px 4px 8px rgba(0, 0, 0, 0.3))',
                 }}
               />
               </div>
