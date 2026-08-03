@@ -889,13 +889,21 @@ function App() {
   // travel the same pixel distances (EXIT_LIFT, REVEAL_Y_START/END below),
   // just spread across a bigger scroll range now that the outro has room.
   //
-  // sections 1-3 each hold their very last stage's finished state for the
-  // final 10% of that section (nothing left to animate — the next
-  // section's first stage doesn't start until the section boundary) —
-  // a brief pause before each transition, giving the reader a moment to
-  // take in what just happened before the next section kicks off. The
-  // outro isn't compressed this way; it already has its own internal
-  // pacing plus the trailing buffer holding the very end.
+  // sections 1-3 each hold their very last stage's finished state for a
+  // brief pause before the next section's first stage begins — a moment
+  // for the reader to take in what just happened. SECTION_BREAK is the
+  // one shared constant controlling that pause's length, so all three
+  // are guaranteed identical (not just approximately equal) — each
+  // section's last stage is defined to end exactly at SEC*_END below,
+  // which is derived directly from SECTION_BREAK, rather than from an
+  // independently-rounded width that could drift out of sync. The outro
+  // isn't compressed this way; it already has its own internal pacing
+  // plus the trailing buffer holding the very end.
+  const SECTION_LEN = 0.25; // every section is an equal quarter of total scroll
+  const SECTION_BREAK = 0.025; // identical pause length before each of the 3 transitions
+  const SEC1_END = SECTION_LEN - SECTION_BREAK; // 0.225 — section 1's last stage ends here
+  const SEC2_END = 2 * SECTION_LEN - SECTION_BREAK; // 0.475 — section 2's last stage ends here
+  const SEC3_END = 3 * SECTION_LEN - SECTION_BREAK; // 0.725 — section 3's last stage ends here
   const appearEnd = 0.042 * TIMELINE_SCALE;
   const moveT = clamp01((progress - appearEnd) / (0.024 * TIMELINE_SCALE));
   const spawnT = clamp01((progress - 0.066 * TIMELINE_SCALE) / (0.06 * TIMELINE_SCALE));
@@ -925,14 +933,17 @@ function App() {
   // "Analogous" fades in as the teal row and purple circle spawn
   const analogousLabelLocal = clamp01(stageRows / 0.5);
 
-  // green and red spawn in together
-  const stageSignal = clamp01((progress - 0.234 * TIMELINE_SCALE) / (0.066 * TIMELINE_SCALE));
+  // green and red spawn in together — the last stage of section 1, so
+  // its end is pinned exactly to SEC1_END (not an independently-rounded
+  // width) to guarantee the pause before section 2 is exactly
+  // SECTION_BREAK long
+  const stageSignalStart = 0.234 * TIMELINE_SCALE;
+  const stageSignal = clamp01((progress - stageSignalStart) / (SEC1_END - stageSignalStart));
   const greenLocal = clamp01(stageSignal / 0.6);
   const redLocal = clamp01(stageSignal / 0.6);
 
-  // "Signal" fades in as green and red spawn — the last stage of section
-  // 1, settling by 0.225 (90% of the way through the section), then
-  // holding until 0.25 hands off to section 2
+  // "Signal" fades in as green and red spawn, then holds until SEC1_END
+  // + SECTION_BREAK hands off to section 2
   const signalLabelLocal = clamp01(stageSignal / 0.6);
 
   // all five rows form together, then every claimed circle morphs into
@@ -943,12 +954,13 @@ function App() {
   const stageRow3 = stageRowAll;
   const stageRow4 = stageRowAll;
   const stageRow5 = stageRowAll;
-  const morphT = clamp01((progress - 0.5048 * TIMELINE_SCALE) / (0.1286 * TIMELINE_SCALE));
+  // the last stage of section 2 — same SEC2_END-pinning as stageSignal
+  // above, so this section's pause is exactly SECTION_BREAK long too
+  const morphTStart = 0.5048 * TIMELINE_SCALE;
+  const morphT = clamp01((progress - morphTStart) / (SEC2_END - morphTStart));
 
   // row 1's swatches restack into overlapping cards, row 2's text frames
-  // onto the first card, and row 3's buttons frame onto the duplicate
-  // stack — the last stage of section 2, settling by 0.475, then holding
-  // until 0.5 hands off to section 3
+  // onto the first card, and row 3's buttons frame onto the duplicate stack
   const stackT = clamp01((progress - 0.6667 * TIMELINE_SCALE) / (0.08 * TIMELINE_SCALE));
 
   // only once that initial move settles does row 2's text duplicate and
@@ -967,9 +979,10 @@ function App() {
 
   // finally, once those words have all spawned, a green checkmark appears
   // to the left of each one, one at a time, and its text turns to match —
-  // the last stage of section 3, settling by 0.725, then holding until
-  // 0.75 hands off to the outro
-  const checksT = clamp01((progress - 0.9167 * TIMELINE_SCALE) / (0.05 * TIMELINE_SCALE));
+  // the last stage of section 3, same SEC3_END-pinning as the other two,
+  // so its pause before the outro is exactly SECTION_BREAK long as well
+  const checksTStart = 0.9167 * TIMELINE_SCALE;
+  const checksT = clamp01((progress - checksTStart) / (SEC3_END - checksTStart));
   const check1Local = clamp01(checksT / (1 / 3));
   const check2Local = clamp01((checksT - 1 / 3) / (1 / 3));
   const check3Local = clamp01((checksT - 2 / 3) / (1 / 3));
