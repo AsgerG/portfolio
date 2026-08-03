@@ -962,10 +962,12 @@ function App() {
   // (solutionViewRevealT) -> two more connector lines grow at once — one
   // down from home-page, one right-to-left from solution-view — both
   // converging on my_club's position (convergeT) -> my_club fades in
-  // where they meet (myClubRevealT) -> the camera pans up one row
-  // (scrollT/cameraOffset) so there's room below for the next row -> a
-  // connector line grows down from my_club (playersLineT) -> players
-  // fades in underneath it (playersRevealT).
+  // where they meet (myClubRevealT) -> a connector line grows down from
+  // my_club (playersLineT) -> players fades in underneath it
+  // (playersRevealT). The camera pan (cameraOffset, below) is NOT one of
+  // these discrete stages — it's a separate, continuous ramp that starts
+  // the moment row 2 begins (VLINE_END) and runs slowly all the way
+  // through to PLAYERS_LINE_END, overlapping every stage in between.
   const outroT = clamp01((progress - TIMELINE_SCALE) / (1 - TIMELINE_SCALE));
   const BASE_SVG_END = 0.13; // outroT 0      -> 0.13: base SVG
   const DETAIL_SVG_END = 0.24; // outroT 0.13  -> 0.24: detail SVG
@@ -973,12 +975,13 @@ function App() {
   const LINE_END = 0.39; // outroT 0.34        -> 0.39: horizontal connector line
   const SET_PAGE_END = 0.49; // outroT 0.39    -> 0.49: set-page image
   const VLINE_END = 0.54; // outroT 0.49       -> 0.54: vertical connector line
+  // (also where the continuous camera pan begins — see cameraOffset below)
   const SOLUTION_VIEW_END = 0.64; // outroT 0.54 -> 0.64: solution-view image
   const CONVERGE_LINES_END = 0.71; // outroT 0.64 -> 0.71: the two lines to my_club
   const MY_CLUB_END = 0.78; // outroT 0.71     -> 0.78: my_club image
-  const SCROLL_END = 0.85; // outroT 0.78      -> 0.85: camera pans up one row
-  const PLAYERS_LINE_END = 0.92; // outroT 0.85 -> 0.92: connector line down from my_club
-  // outroT 0.92 -> 1: players image
+  const PLAYERS_LINE_END = 0.9; // outroT 0.78 -> 0.9: connector line down from my_club
+  // (also where the continuous camera pan finishes)
+  // outroT 0.9 -> 1: players image
   const IMAGE_GAP = 50; // px gap between images, reused for every gap
   const IMAGE_HEIGHT = 308.25; // rendered height of the 450px-wide 1200x822
   // screenshots (sbc_set_page, solution_view, my_club, players) at that
@@ -997,12 +1000,14 @@ function App() {
   const solutionViewRevealT = clamp01((outroT - VLINE_END) / (SOLUTION_VIEW_END - VLINE_END));
   const convergeT = clamp01((outroT - SOLUTION_VIEW_END) / (CONVERGE_LINES_END - SOLUTION_VIEW_END));
   const myClubRevealT = clamp01((outroT - CONVERGE_LINES_END) / (MY_CLUB_END - CONVERGE_LINES_END));
-  // camera pans up by one row (ROW_HEIGHT) so row 3 (players) has room to
-  // be visible below — a slow, smooth scroll rather than an instant jump
-  const scrollT = clamp01((outroT - MY_CLUB_END) / (SCROLL_END - MY_CLUB_END));
-  const cameraOffset = lerp(0, ROW_HEIGHT, scrollT);
-  const playersLineT = clamp01((outroT - SCROLL_END) / (PLAYERS_LINE_END - SCROLL_END));
+  const playersLineT = clamp01((outroT - MY_CLUB_END) / (PLAYERS_LINE_END - MY_CLUB_END));
   const playersRevealT = clamp01((outroT - PLAYERS_LINE_END) / (1 - PLAYERS_LINE_END));
+  // continuous camera pan: starts the instant row 2 is introduced
+  // (VLINE_END) and creeps up by one row (ROW_HEIGHT) slowly across
+  // everything from there through to PLAYERS_LINE_END — not a separate
+  // jump between reveals, just an ongoing slow drift underneath them
+  const scrollT = clamp01((outroT - VLINE_END) / (PLAYERS_LINE_END - VLINE_END));
+  const cameraOffset = lerp(0, ROW_HEIGHT, scrollT);
   // outgoing content rises the same distance (520px) over the same baseT
   // range as the base SVG above (both driven by baseT, not raw outroT),
   // so the two stay synced/matched-rate through the whole exit
