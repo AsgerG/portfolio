@@ -1181,9 +1181,12 @@ function App() {
   // from the start; only the active one is highlighted (full opacity),
   // the rest sit dimmed at 30%, no entrance/exit animation or overlap
   const activeSection = progress < 0.25 ? 0 : progress < 0.5 ? 1 : progress < 0.75 ? 2 : 3;
-  // the active section's text sticks at this fixed distance from the top
-  // of the viewport (not vertically centered)
-  const TEXT_ACTIVE_Y = 80;
+  // the animation canvas is 560px tall, centered in its own h-screen
+  // column via flex items-center — so its own top edge sits at
+  // calc(50% - 280px) of the viewport. The active section's text aligns
+  // with that same edge, rather than a fixed pixel value, so it always
+  // lines up with the top of the animation regardless of viewport height.
+  const CANVAS_HEIGHT = 560;
   // vertical spacing between each section's slot in the text stack below.
   // The longest paragraph (section 1, ~97 words) wraps to roughly 12
   // lines at max-w-md/text-lg (~28px line-height), i.e. ~340px tall —
@@ -2725,15 +2728,17 @@ function App() {
       {/* the actual case-study text — all four blocks stacked underneath
           each other, same x-axis as before (left/width: 50%, unchanged —
           only the y-position moves). Each block's own `top` is
-          TEXT_ACTIVE_Y + (i - activeSection) * TEXT_ITEM_GAP, so the
-          active one (i === activeSection) always lands exactly at
-          y = TEXT_ACTIVE_Y (sticky at a fixed distance from the top of
-          the viewport, not centered); earlier sections sit above that,
-          later ones sit below — a single offset computed directly from
-          the index difference. TEXT_ITEM_GAP is comfortably taller than
-          the longest paragraph so the fully-visible active block never
-          overlaps its dimmed neighbors. Sections above the active one
-          fade to 0; sections below stay dimmed at 30%. */}
+          calc(50% - 280px + (i - activeSection) * TEXT_ITEM_GAP), so the
+          active one (i === activeSection) always lands exactly on the
+          animation canvas's own top edge (calc(50% - CANVAS_HEIGHT/2),
+          matching how the canvas is centered via flex items-center in
+          its h-screen column) rather than a fixed pixel value — so it
+          stays aligned with the top of the animation at any viewport
+          height. Earlier sections sit above that, later ones sit below.
+          TEXT_ITEM_GAP is comfortably taller than the longest paragraph
+          so the fully-visible active block never overlaps its dimmed
+          neighbors. Sections above the active one fade to 0; sections
+          below stay dimmed at 30%. */}
       <div
         className="fixed top-0 h-screen pointer-events-none"
         style={{ left: '50%', width: '50%', zIndex: 15 }}
@@ -2744,7 +2749,7 @@ function App() {
               key={i}
               className="absolute left-0 text-white text-lg max-w-md px-12"
               style={{
-                top: `${TEXT_ACTIVE_Y + (i - activeSection) * TEXT_ITEM_GAP}px`,
+                top: `calc(50% - ${CANVAS_HEIGHT / 2}px + ${(i - activeSection) * TEXT_ITEM_GAP}px)`,
                 opacity: i < activeSection ? 0 : i === activeSection ? 1 : 0.3,
                 transition: 'top 0.4s ease, opacity 0.4s ease',
               }}
