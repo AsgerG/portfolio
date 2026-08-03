@@ -851,7 +851,8 @@ const sectionCopy = [
   `EasySBC needed a strong brand feel — something technical enough to match the calculations running underneath it. The interface also had to handle dense data tables and colorful EA artwork without turning cluttered, so I built around a dark blue-grey base that let those colors do the talking. It also happens to suit the low-light conditions most players use when grinding FIFA at night. Blue anchors the palette to match the logo, with an analogous scheme built around it — teal and purple — leaving green and red free for their classic job: clear, unambiguous signal colors.`,
   `As a third-party tool, EasySBC lives or dies on recognizability — a player needs to glance at a stat on the site and instantly know which in-game attribute it maps to. EA also reshuffles its own color coding almost every FC edition, so a handful of colors were deliberately built into the palette as known temporary placeholders — flagged from day one as due for revision, rather than treated as permanent parts of the system.`,
   `Every component was checked against the same bar: color contrast, colorblindness, sizing, and SEO compliance. Those checks became a living set of guidelines — exactly where and how each color and element was allowed to be used, so the system stayed consistent as it grew.`,
-  `Wireframes were part of the process from day one of the MVP. Through every iteration, the goal stayed the same: a consistent design that felt intuitive and quietly guided the user, rather than one that demanded their attention.`,
+  `Wireframes were part of the process from day one of the MVP — sketching out structure and flow before any color or polish entered the picture, so the underlying logic held up on its own.`,
+  `From there, those wireframes became the real thing. Here's a look at the finished product — from the home dashboard through squad building, evolutions, and match tactics — each screen built on the same consistent system laid out above.`,
 ];
 
 function App() {
@@ -1163,10 +1164,14 @@ function App() {
     '#F83959': stageRow5,
   };
 
-  // four named sections across the whole scroll, for the readout next to
-  // the progress counter below — now an even quarter each (0.25 apiece),
-  // since the stage boundaries above were rescaled so section 1 no longer
-  // eats up roughly half the animation
+  // five named sections across the whole scroll, for the readout next to
+  // the progress counter below — the first three are even quarters
+  // (0.25 apiece); the old "Wireframes & overview" quarter is now split
+  // in two right where the illustration reveal hands off to the image
+  // mosaic (DETAIL_SVG_END, in outroT's own 0-1 scale, converted to
+  // absolute progress) — Wireframes covers the illustration itself,
+  // Overview starts the moment we begin drawing/spawning screenshots.
+  const OVERVIEW_START = TIMELINE_SCALE + DETAIL_SVG_END * (1 - TIMELINE_SCALE);
   const sectionName =
     progress < 0.25
       ? 'Part 1: Color palette'
@@ -1174,13 +1179,25 @@ function App() {
         ? 'Part 2: Color semantics'
         : progress < 0.75
           ? 'Part 3: UI components'
-          : 'Part 4: Wireframes & overview';
+          : progress < OVERVIEW_START
+            ? 'Part 4: Wireframes'
+            : 'Part 5: Overview';
 
-  // which of the 4 sections is current, for highlighting below — all four
-  // blocks are visible together, stacked underneath each other, right
-  // from the start; only the active one is highlighted (full opacity),
-  // the rest sit dimmed at 30%, no entrance/exit animation or overlap
-  const activeSection = progress < 0.25 ? 0 : progress < 0.5 ? 1 : progress < 0.75 ? 2 : 3;
+  // which of the 5 sections is current, for highlighting below — all
+  // five blocks are visible together, stacked underneath each other,
+  // right from the start; only the active one is highlighted (full
+  // opacity), the rest sit dimmed at 30%, no entrance/exit animation or
+  // overlap
+  const activeSection =
+    progress < 0.25
+      ? 0
+      : progress < 0.5
+        ? 1
+        : progress < 0.75
+          ? 2
+          : progress < OVERVIEW_START
+            ? 3
+            : 4;
   // the animation canvas is 560px tall, centered in its own h-screen
   // column via flex items-center — so its own top edge sits at
   // calc(50% - 280px) of the viewport. The active section's text aligns
