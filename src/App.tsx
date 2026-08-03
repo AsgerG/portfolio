@@ -1176,52 +1176,11 @@ function App() {
           ? 'Part 3: UI components'
           : 'Part 4: Wireframes & overview';
 
-  // same four boundaries as sectionName above, as numeric [start, end]
-  // pairs so each section's text can compute its own transition timing
-  const SECTION_RANGES: [number, number][] = [
-    [0, 0.25],
-    [0.25, 0.5],
-    [0.5, 0.75],
-    [0.75, 1],
-  ];
-
-  // each text block scrolls up and fades as it leaves, while the next
-  // block scrolls up (from underneath, i.e. it starts below its resting
-  // position) and fades in at the same time — a crossfade centered on
-  // each section boundary rather than a hard cut. TEXT_TRANSITION_HALF is
-  // deliberately generous (not a snappy instant swap): the whole
-  // transition spans 2*TEXT_TRANSITION_HALF = 0.08 of total progress,
-  // half before the boundary and half after, so outgoing and incoming
-  // text overlap on-screen for a moment, both drifting upward together.
-  const TEXT_TRANSITION_HALF = 0.04;
-  const TEXT_OFFSET = 40; // px each block travels while entering/exiting
-  const sectionTextT = SECTION_RANGES.map(([start, end], i) => {
-    const isFirst = i === 0;
-    const isLast = i === SECTION_RANGES.length - 1;
-    // entrance: fades/slides up starting a bit before this section's own
-    // start (so it overlaps with the previous block's exit) — except the
-    // very first block, which has nothing before it to overlap with, so
-    // it simply enters right from progress 0
-    const entryStart = isFirst ? start : start - TEXT_TRANSITION_HALF;
-    const entryEnd = start + TEXT_TRANSITION_HALF;
-    const enterT = clamp01((progress - entryStart) / (entryEnd - entryStart));
-    // exit: continues sliding up and fades out a bit before this
-    // section's own end (overlapping with the next block's entrance) —
-    // except the very last block, which has nothing after it, so it just
-    // stays resting once fully entered
-    let exitT = 0;
-    if (!isLast) {
-      const exitStart = end - TEXT_TRANSITION_HALF;
-      const exitEnd = end + TEXT_TRANSITION_HALF;
-      exitT = clamp01((progress - exitStart) / (exitEnd - exitStart));
-    }
-    const opacity = enterT * (1 - exitT);
-    // one continuous upward drift: starts TEXT_OFFSET below rest, eases
-    // to 0 (resting) as it enters, then keeps drifting up to -TEXT_OFFSET
-    // as it exits — never reverses direction
-    const translateY = TEXT_OFFSET * (1 - enterT) - TEXT_OFFSET * exitT;
-    return { opacity, translateY };
-  });
+  // which of the 4 sections is current, for highlighting below — all four
+  // blocks are visible together, stacked underneath each other, right
+  // from the start; only the active one is highlighted (full opacity),
+  // the rest sit dimmed at 30%, no entrance/exit animation or overlap
+  const activeSection = progress < 0.25 ? 0 : progress < 0.5 ? 1 : progress < 0.75 ? 2 : 3;
 
   return (
     <div className="bg-[#15181D]">
@@ -2754,30 +2713,28 @@ function App() {
         </div>
       </div>
 
-      {/* the actual case-study text, one fixed layer per section. Stays
-          glued to the same spot on screen for that section's entire
-          length (see sectionTextT above), scrolling up and fading out as
-          its section ends while the next block scrolls up from
-          underneath and fades in — a crossfade rather than a hard swap.
-          Positioned to sit over the right half of the grid (where the
-          text column lives) via left/width: 50%. */}
-      {SECTION_RANGES.map((_, i) => (
-        <div
-          key={i}
-          className="fixed top-0 h-screen flex items-center px-12 pointer-events-none overflow-hidden"
-          style={{ left: '50%', width: '50%', zIndex: 15 }}
-        >
+      {/* the actual case-study text — all four blocks stacked underneath
+          each other, visible together from the very start, no
+          overlapping and no entrance/exit animation. Only the active
+          section (matching whichever part of the scroll we're in) is at
+          full opacity; the rest sit dimmed at 30%. Fixed in place over
+          the right half of the grid (where the text column lives) via
+          left/width: 50%, so the whole stack stays on screen throughout
+          the scroll. */}
+      <div
+        className="fixed top-0 h-screen flex flex-col justify-center gap-10 px-12 pointer-events-none"
+        style={{ left: '50%', width: '50%', zIndex: 15 }}
+      >
+        {sectionCopy.map((text, i) => (
           <p
-            className="text-white/70 text-lg max-w-md"
-            style={{
-              opacity: sectionTextT[i].opacity,
-              transform: `translateY(${sectionTextT[i].translateY}px)`,
-            }}
+            key={i}
+            className="text-white text-lg max-w-md"
+            style={{ opacity: i === activeSection ? 1 : 0.3 }}
           >
-            {sectionCopy[i]}
+            {text}
           </p>
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
   );
 }
