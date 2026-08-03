@@ -1181,10 +1181,12 @@ function App() {
   // from the start; only the active one is highlighted (full opacity),
   // the rest sit dimmed at 30%, no entrance/exit animation or overlap
   const activeSection = progress < 0.25 ? 0 : progress < 0.5 ? 1 : progress < 0.75 ? 2 : 3;
-  // vertical spacing between each section's slot in the text stack below
-  // — generous enough that a full paragraph (max-w-md, text-lg) doesn't
-  // visually collide with its dimmed neighbors above/below
-  const TEXT_ITEM_GAP = 260;
+  // vertical spacing between each section's slot in the text stack below.
+  // The longest paragraph (section 1, ~97 words) wraps to roughly 12
+  // lines at max-w-md/text-lg (~28px line-height), i.e. ~340px tall —
+  // 440px leaves enough headroom that the fully-visible active block
+  // never visually collides with its dimmed neighbors above/below.
+  const TEXT_ITEM_GAP = 440;
 
   return (
     <div className="bg-[#15181D]">
@@ -2718,36 +2720,32 @@ function App() {
       </div>
 
       {/* the actual case-study text — all four blocks stacked underneath
-          each other in one column, each positioned at a fixed offset from
-          center (TEXT_ITEM_GAP apart). The whole stack shifts vertically
-          by -activeSection * TEXT_ITEM_GAP, so whichever section is
-          currently active always lands exactly on screen-center (that's
-          the "sticky in the center" part) — sections above it (lower
-          index, already passed) fade all the way to 0, sections below it
-          (not yet reached) stay dimmed at 30%, waiting their turn. Fixed
-          over the right half of the grid (where the text column lives)
-          via left/width: 50%. */}
+          each other, same x-axis as before (left/width: 50%, unchanged —
+          only the y-position moves). Each block's own `top` is
+          calc(50% + (i - activeSection) * TEXT_ITEM_GAP), so the active
+          one (i === activeSection) always lands exactly on
+          calc(50%) + translateY(-50%) = dead center; earlier sections
+          sit above center, later ones sit below — a single offset
+          computed directly from the index difference, not a separate
+          shifting wrapper, so there's no double-transform to get
+          "weirdly placed". TEXT_ITEM_GAP is comfortably taller than the
+          longest paragraph so the fully-visible active block never
+          overlaps its dimmed neighbors. Sections above the active one
+          fade to 0; sections below stay dimmed at 30%. */}
       <div
-        className="fixed top-1/2 left-1/2 pointer-events-none"
-        style={{ transform: 'translate(-50%, -50%)', zIndex: 15 }}
+        className="fixed top-0 h-screen pointer-events-none"
+        style={{ left: '50%', width: '50%', zIndex: 15 }}
       >
-        <div
-          className="relative"
-          style={{
-            width: '50vw',
-            transform: `translateY(${-activeSection * TEXT_ITEM_GAP}px)`,
-            transition: 'transform 0.4s ease',
-          }}
-        >
+        <div className="relative h-full">
           {sectionCopy.map((text, i) => (
             <p
               key={i}
               className="absolute left-0 text-white text-lg max-w-md px-12"
               style={{
-                top: i * TEXT_ITEM_GAP,
+                top: `calc(50% + ${(i - activeSection) * TEXT_ITEM_GAP}px)`,
                 transform: 'translateY(-50%)',
                 opacity: i < activeSection ? 0 : i === activeSection ? 1 : 0.3,
-                transition: 'opacity 0.4s ease',
+                transition: 'top 0.4s ease, opacity 0.4s ease',
               }}
             >
               {text}
