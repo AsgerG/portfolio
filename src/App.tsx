@@ -2697,64 +2697,24 @@ function App() {
           </div>
         </div>
 
-        {/* case-study copy, one block per section. Each section is now an
-            equal quarter of the total scroll (see SECTION_RANGES above),
-            so all four containers get the same height (121vh — matching
-            roughly the same total budget the old proportional layout
-            used), each with a sticky child that pins it to the top of the
-            viewport for that whole span — same pinning mechanism as the
-            animation canvas beside it. The text itself rolls in (fades +
-            slides up) over just the first 15% of its own section via
-            sectionRollT, then holds still, fully visible, for the rest. */}
-        <div className="flex flex-col text-white/70 text-lg max-w-md">
-          <div style={{ height: '121vh' }}>
-            <div className="sticky top-0 h-screen flex items-center px-12">
-              <p
-                style={{
-                  opacity: sectionRollT[0],
-                  transform: `translateY(${lerp(24, 0, sectionRollT[0])}px)`,
-                }}
-              >
-                {sectionCopy[0]}
-              </p>
-            </div>
-          </div>
-          <div style={{ height: '121vh' }}>
-            <div className="sticky top-0 h-screen flex items-center px-12">
-              <p
-                style={{
-                  opacity: sectionRollT[1],
-                  transform: `translateY(${lerp(24, 0, sectionRollT[1])}px)`,
-                }}
-              >
-                {sectionCopy[1]}
-              </p>
-            </div>
-          </div>
-          <div style={{ height: '121vh' }}>
-            <div className="sticky top-0 h-screen flex items-center px-12">
-              <p
-                style={{
-                  opacity: sectionRollT[2],
-                  transform: `translateY(${lerp(24, 0, sectionRollT[2])}px)`,
-                }}
-              >
-                {sectionCopy[2]}
-              </p>
-            </div>
-          </div>
-          <div style={{ height: '121vh' }}>
-            <div className="sticky top-0 h-screen flex items-center px-12">
-              <p
-                style={{
-                  opacity: sectionRollT[3],
-                  transform: `translateY(${lerp(24, 0, sectionRollT[3])}px)`,
-                }}
-              >
-                {sectionCopy[3]}
-              </p>
-            </div>
-          </div>
+        {/* plain spacer column — these divs carry no text of their own
+            anymore, they exist purely to give the ref container the total
+            height it needs for the overall scroll pace (same ~544vh
+            budget as before). Native CSS sticky can only hold an element
+            in place for (containerHeight - 100vh) of scroll before
+            releasing, which would need a MUCH taller container to cover a
+            full 25% of a reasonably-sized page (checked: to make sticky
+            alone last exactly until the next section, these would have to
+            balloon to 350-400vh+ each, nearly tripling the page length) —
+            so instead, the actual visible text is rendered separately
+            below as fixed-position layers keyed directly to `progress`,
+            which stays stuck for an entire section with no dependency on
+            container height at all. */}
+        <div className="flex flex-col max-w-md">
+          <div style={{ height: '121vh' }} aria-hidden />
+          <div style={{ height: '121vh' }} aria-hidden />
+          <div style={{ height: '121vh' }} aria-hidden />
+          <div style={{ height: '121vh' }} aria-hidden />
           {/* trailing buffer: without this, the sticky canvas unsticks and
               starts scrolling away the instant progress hits 1 (there's no
               container height left to keep it pinned), cutting the outro
@@ -2763,6 +2723,36 @@ function App() {
           <div className="h-[60vh]" aria-hidden />
         </div>
       </div>
+
+      {/* the actual case-study text, one fixed layer per section. Each is
+          visible (and interactive-free, hence pointer-events-none) only
+          while `progress` is inside that section's own SECTION_RANGES
+          span, so it stays glued to the same spot on screen for that
+          section's *entire* length — right up until the next section
+          starts — regardless of scroll speed or container height. Positioned
+          to sit over the right half of the grid (where the text column
+          lives) via left/width: 50%. */}
+      {SECTION_RANGES.map(([start, end], i) => {
+        const isLast = i === SECTION_RANGES.length - 1;
+        const active = progress >= start && (isLast || progress < end);
+        return (
+          <div
+            key={i}
+            className="fixed top-0 h-screen flex items-center px-12 pointer-events-none"
+            style={{ left: '50%', width: '50%', zIndex: 15 }}
+          >
+            <p
+              className="text-white/70 text-lg max-w-md"
+              style={{
+                opacity: active ? sectionRollT[i] : 0,
+                transform: `translateY(${lerp(24, 0, active ? sectionRollT[i] : 0)}px)`,
+              }}
+            >
+              {sectionCopy[i]}
+            </p>
+          </div>
+        );
+      })}
     </div>
   );
 }
