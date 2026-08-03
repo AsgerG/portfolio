@@ -3,6 +3,7 @@ import Lenis from 'lenis';
 import sbcHomePage from './assets/sbc_home_page.png';
 import sbcSetPage from './assets/sbc_set_page.png';
 import solutionView from './assets/solution_view.png';
+import myClub from './assets/my_club.png';
 
 // drives smooth/eased scrolling site-wide. Lenis animates the native scroll
 // position itself (window.scrollTo under the hood), so it still dispatches
@@ -950,25 +951,30 @@ function App() {
   const check2Local = clamp01((checksT - 1 / 3) / (1 / 3));
   const check3Local = clamp01((checksT - 2 / 3) / (1 / 3));
 
-  // outro is split into seven back-to-back parts of outroT — each stage
+  // outro is split into nine back-to-back parts of outroT — each stage
   // waits for the previous one to completely finish before it starts:
   // base SVG spawns + moves (baseT) -> detail SVG fades in on top
   // (detailRevealT) -> home-page image fades in (homePageRevealT) ->
   // horizontal connector line grows across the gap (lineT) -> set-page
   // image fades in beside it (setPageRevealT) -> vertical connector line
   // grows down from set-page (vLineT) -> solution-view image fades in
-  // underneath it (solutionViewRevealT).
+  // underneath it (solutionViewRevealT) -> two more connector lines grow
+  // at once — one down from home-page, one right-to-left from
+  // solution-view — both converging on my_club's position (convergeT) ->
+  // my_club fades in where they meet (myClubRevealT).
   const outroT = clamp01((progress - TIMELINE_SCALE) / (1 - TIMELINE_SCALE));
-  const BASE_SVG_END = 0.2; // outroT 0     -> 0.2:  base SVG
-  const DETAIL_SVG_END = 0.35; // outroT 0.2 -> 0.35: detail SVG
-  const HOME_PAGE_END = 0.5; // outroT 0.35  -> 0.5:  home-page image
-  const LINE_END = 0.58; // outroT 0.5       -> 0.58: horizontal connector line
-  const SET_PAGE_END = 0.72; // outroT 0.58  -> 0.72: set-page image
-  const VLINE_END = 0.8; // outroT 0.72      -> 0.8:  vertical connector line
-  // outroT 0.8 -> 1: solution-view image
+  const BASE_SVG_END = 0.15; // outroT 0      -> 0.15: base SVG
+  const DETAIL_SVG_END = 0.28; // outroT 0.15  -> 0.28: detail SVG
+  const HOME_PAGE_END = 0.4; // outroT 0.28    -> 0.4:  home-page image
+  const LINE_END = 0.46; // outroT 0.4         -> 0.46: horizontal connector line
+  const SET_PAGE_END = 0.58; // outroT 0.46    -> 0.58: set-page image
+  const VLINE_END = 0.64; // outroT 0.58       -> 0.64: vertical connector line
+  const SOLUTION_VIEW_END = 0.76; // outroT 0.64 -> 0.76: solution-view image
+  const CONVERGE_LINES_END = 0.85; // outroT 0.76 -> 0.85: the two lines to my_club
+  // outroT 0.85 -> 1: my_club image
   const IMAGE_GAP = 50; // px gap between images, reused for every gap
   const IMAGE_HEIGHT = 308.25; // rendered height of the 450px-wide 1200x822
-  // screenshots (sbc_set_page, solution_view) at that aspect ratio
+  // screenshots (sbc_set_page, solution_view, my_club) at that aspect ratio
   const baseT = clamp01(outroT / BASE_SVG_END);
   const REVEAL_Y_START = 600; // illustration's own y position: travels from
   const REVEAL_Y_END = 80; // 600 (below the canvas) up to 80 (near the top)
@@ -979,7 +985,9 @@ function App() {
   const lineT = clamp01((outroT - HOME_PAGE_END) / (LINE_END - HOME_PAGE_END));
   const setPageRevealT = clamp01((outroT - LINE_END) / (SET_PAGE_END - LINE_END));
   const vLineT = clamp01((outroT - SET_PAGE_END) / (VLINE_END - SET_PAGE_END));
-  const solutionViewRevealT = clamp01((outroT - VLINE_END) / (1 - VLINE_END));
+  const solutionViewRevealT = clamp01((outroT - VLINE_END) / (SOLUTION_VIEW_END - VLINE_END));
+  const convergeT = clamp01((outroT - SOLUTION_VIEW_END) / (CONVERGE_LINES_END - SOLUTION_VIEW_END));
+  const myClubRevealT = clamp01((outroT - CONVERGE_LINES_END) / (1 - CONVERGE_LINES_END));
   // outgoing content rises the same distance (520px) over the same baseT
   // range as the base SVG above (both driven by baseT, not raw outroT),
   // so the two stay synced/matched-rate through the whole exit
@@ -2150,6 +2158,54 @@ function App() {
                   height: 'auto',
                   zIndex: 2,
                   opacity: solutionViewRevealT,
+                }}
+              />
+
+              {/* two connector lines converging on my_club, growing at the
+                  same time (convergeT): one straight down from
+                  sbc_home_page's bottom edge, the other right-to-left from
+                  solution_view's left edge (anchored on the right at
+                  x=500, growing leftward) */}
+              <div
+                style={{
+                  position: 'absolute',
+                  top: IMAGE_HEIGHT,
+                  left: 225, // horizontal center of the sbc_home_page column
+                  width: 2,
+                  height: lerp(0, IMAGE_GAP, convergeT),
+                  backgroundColor: 'rgba(255, 255, 255, 0.6)',
+                  zIndex: 2,
+                }}
+              />
+              <div
+                style={{
+                  position: 'absolute',
+                  top: IMAGE_HEIGHT + IMAGE_GAP + IMAGE_HEIGHT / 2, // vertical center of row 2
+                  left: 500 - lerp(0, IMAGE_GAP, convergeT), // right edge fixed at 500, grows leftward
+                  width: lerp(0, IMAGE_GAP, convergeT),
+                  height: 2,
+                  backgroundColor: 'rgba(255, 255, 255, 0.6)',
+                  zIndex: 2,
+                }}
+              />
+
+              {/* my_club screenshot — same 450px width, sits below
+                  sbc_home_page (same left edge) and beside solution_view
+                  (same row), where the two connector lines above meet.
+                  Waits until both lines have fully grown before it starts
+                  fading in. */}
+              <img
+                src={myClub}
+                alt=""
+                width={450}
+                style={{
+                  position: 'absolute',
+                  top: IMAGE_HEIGHT + IMAGE_GAP,
+                  left: 0,
+                  width: 450,
+                  height: 'auto',
+                  zIndex: 2,
+                  opacity: myClubRevealT,
                 }}
               />
             </div>
