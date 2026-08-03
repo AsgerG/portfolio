@@ -1181,6 +1181,10 @@ function App() {
   // from the start; only the active one is highlighted (full opacity),
   // the rest sit dimmed at 30%, no entrance/exit animation or overlap
   const activeSection = progress < 0.25 ? 0 : progress < 0.5 ? 1 : progress < 0.75 ? 2 : 3;
+  // vertical spacing between each section's slot in the text stack below
+  // — generous enough that a full paragraph (max-w-md, text-lg) doesn't
+  // visually collide with its dimmed neighbors above/below
+  const TEXT_ITEM_GAP = 260;
 
   return (
     <div className="bg-[#15181D]">
@@ -2714,26 +2718,42 @@ function App() {
       </div>
 
       {/* the actual case-study text — all four blocks stacked underneath
-          each other, visible together from the very start, no
-          overlapping and no entrance/exit animation. Only the active
-          section (matching whichever part of the scroll we're in) is at
-          full opacity; the rest sit dimmed at 30%. Fixed in place over
-          the right half of the grid (where the text column lives) via
-          left/width: 50%, so the whole stack stays on screen throughout
-          the scroll. */}
+          each other in one column, each positioned at a fixed offset from
+          center (TEXT_ITEM_GAP apart). The whole stack shifts vertically
+          by -activeSection * TEXT_ITEM_GAP, so whichever section is
+          currently active always lands exactly on screen-center (that's
+          the "sticky in the center" part) — sections above it (lower
+          index, already passed) fade all the way to 0, sections below it
+          (not yet reached) stay dimmed at 30%, waiting their turn. Fixed
+          over the right half of the grid (where the text column lives)
+          via left/width: 50%. */}
       <div
-        className="fixed top-0 h-screen flex flex-col justify-center gap-10 px-12 pointer-events-none"
-        style={{ left: '50%', width: '50%', zIndex: 15 }}
+        className="fixed top-1/2 left-1/2 pointer-events-none"
+        style={{ transform: 'translate(-50%, -50%)', zIndex: 15 }}
       >
-        {sectionCopy.map((text, i) => (
-          <p
-            key={i}
-            className="text-white text-lg max-w-md"
-            style={{ opacity: i === activeSection ? 1 : 0.3 }}
-          >
-            {text}
-          </p>
-        ))}
+        <div
+          className="relative"
+          style={{
+            width: '50vw',
+            transform: `translateY(${-activeSection * TEXT_ITEM_GAP}px)`,
+            transition: 'transform 0.4s ease',
+          }}
+        >
+          {sectionCopy.map((text, i) => (
+            <p
+              key={i}
+              className="absolute left-0 text-white text-lg max-w-md px-12"
+              style={{
+                top: i * TEXT_ITEM_GAP,
+                transform: 'translateY(-50%)',
+                opacity: i < activeSection ? 0 : i === activeSection ? 1 : 0.3,
+                transition: 'opacity 0.4s ease',
+              }}
+            >
+              {text}
+            </p>
+          ))}
+        </div>
       </div>
     </div>
   );
