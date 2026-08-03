@@ -77,6 +77,212 @@ function hexToRgba(hex: string, alpha: number) {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
+// all twelve mosaic screenshots + their connector lines, driven entirely
+// by a single progress value `t` (0-1, matching outroT's own scale, since
+// its stage boundaries below are the exact same ones outroT uses). Used
+// twice: once inside the pinned/camera-panned spawn canvas (t=outroT, so
+// it keeps animating with scroll), and once in the plain, normal-flow
+// gallery section that follows it (t=1, always fully revealed) so the
+// finished grid can just be scrolled through normally afterwards.
+// Scrolling back up out of the gallery re-enters the pinned canvas's own
+// scroll range, where the very same math (now driven by the shrinking
+// outroT again) makes everything vanish and respawn exactly as it did the
+// first time — no extra state needed for that, it falls out of reusing
+// one clamp01-based timeline for both renderings.
+function ScreenshotMosaic({ t }: { t: number }) {
+  const IMAGE_GAP = 50;
+  const IMAGE_HEIGHT = 308.25;
+  const ROW_HEIGHT = IMAGE_HEIGHT + IMAGE_GAP;
+  const DETAIL_SVG_END = 0.146;
+  const HOME_PAGE_END = 0.216;
+  const LINE_END = 0.239;
+  const SET_PAGE_END = 0.309;
+  const VLINE_END = 0.333;
+  const SOLUTION_VIEW_END = 0.393;
+  const CONVERGE_LINES_END = 0.44;
+  const MY_CLUB_END = 0.486;
+  const PLAYERS_LINE_END = 0.548;
+  const PLAYERS_END = 0.609;
+  const DETAIL_LINE_END = 0.641;
+  const DETAILED_PLAYER_VIEW_END = 0.711;
+  const EVOLUTIONS_LINE_END = 0.741;
+  const EVOLUTIONS_END = 0.798;
+  const BUILDER_LINES_END = 0.832;
+  const EVOLUTION_BUILDER_END = 0.866;
+  const TACTICS_LINE_END = 0.884;
+  const TACTICS_END = 0.912;
+  const SQUAD_BUILDER_LINES_END = 0.931;
+  const SQUAD_BUILDER_END = 0.96;
+  const ROW6_LINES_END = 0.98;
+
+  const homePageRevealT = clamp01((t - DETAIL_SVG_END) / (HOME_PAGE_END - DETAIL_SVG_END));
+  const lineT = clamp01((t - HOME_PAGE_END) / (LINE_END - HOME_PAGE_END));
+  const setPageRevealT = clamp01((t - LINE_END) / (SET_PAGE_END - LINE_END));
+  const vLineT = clamp01((t - SET_PAGE_END) / (VLINE_END - SET_PAGE_END));
+  const solutionViewRevealT = clamp01((t - VLINE_END) / (SOLUTION_VIEW_END - VLINE_END));
+  const convergeT = clamp01((t - SOLUTION_VIEW_END) / (CONVERGE_LINES_END - SOLUTION_VIEW_END));
+  const myClubRevealT = clamp01((t - CONVERGE_LINES_END) / (MY_CLUB_END - CONVERGE_LINES_END));
+  const playersLineT = clamp01((t - MY_CLUB_END) / (PLAYERS_LINE_END - MY_CLUB_END));
+  const playersRevealT = clamp01((t - PLAYERS_LINE_END) / (PLAYERS_END - PLAYERS_LINE_END));
+  const detailLineT = clamp01((t - PLAYERS_END) / (DETAIL_LINE_END - PLAYERS_END));
+  const detailedPlayerViewRevealT = clamp01(
+    (t - DETAIL_LINE_END) / (DETAILED_PLAYER_VIEW_END - DETAIL_LINE_END),
+  );
+  const evolutionsLineT = clamp01(
+    (t - DETAILED_PLAYER_VIEW_END) / (EVOLUTIONS_LINE_END - DETAILED_PLAYER_VIEW_END),
+  );
+  const evolutionsRevealT = clamp01((t - EVOLUTIONS_LINE_END) / (EVOLUTIONS_END - EVOLUTIONS_LINE_END));
+  const builderLinesT = clamp01((t - EVOLUTIONS_END) / (BUILDER_LINES_END - EVOLUTIONS_END));
+  const evolutionBuilderRevealT = clamp01(
+    (t - BUILDER_LINES_END) / (EVOLUTION_BUILDER_END - BUILDER_LINES_END),
+  );
+  const tacticsLineT = clamp01(
+    (t - EVOLUTION_BUILDER_END) / (TACTICS_LINE_END - EVOLUTION_BUILDER_END),
+  );
+  const tacticsRevealT = clamp01((t - TACTICS_LINE_END) / (TACTICS_END - TACTICS_LINE_END));
+  const squadBuilderLinesT = clamp01((t - TACTICS_END) / (SQUAD_BUILDER_LINES_END - TACTICS_END));
+  const squadBuilderRevealT = clamp01(
+    (t - SQUAD_BUILDER_LINES_END) / (SQUAD_BUILDER_END - SQUAD_BUILDER_LINES_END),
+  );
+  const row6LinesT = clamp01((t - SQUAD_BUILDER_END) / (ROW6_LINES_END - SQUAD_BUILDER_END));
+  const row6RevealT = clamp01((t - ROW6_LINES_END) / (1 - ROW6_LINES_END));
+
+  const lineStyle = (top: number, left: number, width: number, height: number) => ({
+    position: 'absolute' as const,
+    top,
+    left,
+    width,
+    height,
+    backgroundColor: 'rgba(255, 255, 255, 0.6)',
+    zIndex: 2,
+  });
+  const imgStyle = (top: number, left: number, opacity: number) => ({
+    position: 'absolute' as const,
+    top,
+    left,
+    width: 450,
+    height: 'auto' as const,
+    zIndex: 2,
+    opacity,
+  });
+
+  return (
+    <>
+      <img src={sbcHomePage} alt="" width={450} style={imgStyle(0, 0, homePageRevealT)} />
+      <div style={lineStyle(154, 450, lerp(0, IMAGE_GAP, lineT), 2)} />
+      <img
+        src={sbcSetPage}
+        alt=""
+        width={450}
+        style={imgStyle(0, 450 + IMAGE_GAP, setPageRevealT)}
+      />
+      <div style={lineStyle(IMAGE_HEIGHT, 450 + IMAGE_GAP + 225, 2, lerp(0, IMAGE_GAP, vLineT))} />
+      <img
+        src={solutionView}
+        alt=""
+        width={450}
+        style={imgStyle(IMAGE_HEIGHT + IMAGE_GAP, 450 + IMAGE_GAP, solutionViewRevealT)}
+      />
+      <div style={lineStyle(IMAGE_HEIGHT, 225, 2, lerp(0, IMAGE_GAP, convergeT))} />
+      <div
+        style={lineStyle(
+          IMAGE_HEIGHT + IMAGE_GAP + IMAGE_HEIGHT / 2,
+          500 - lerp(0, IMAGE_GAP, convergeT),
+          lerp(0, IMAGE_GAP, convergeT),
+          2,
+        )}
+      />
+      <img
+        src={myClub}
+        alt=""
+        width={450}
+        style={imgStyle(IMAGE_HEIGHT + IMAGE_GAP, 0, myClubRevealT)}
+      />
+      <div style={lineStyle(ROW_HEIGHT + IMAGE_HEIGHT, 225, 2, lerp(0, IMAGE_GAP, playersLineT))} />
+      <img src={players} alt="" width={450} style={imgStyle(ROW_HEIGHT * 2, 0, playersRevealT)} />
+      <div
+        style={lineStyle(
+          ROW_HEIGHT * 2 + IMAGE_HEIGHT / 2,
+          450,
+          lerp(0, IMAGE_GAP, detailLineT),
+          2,
+        )}
+      />
+      <img
+        src={detailedPlayerView}
+        alt=""
+        width={450}
+        style={imgStyle(ROW_HEIGHT * 2, 450 + IMAGE_GAP, detailedPlayerViewRevealT)}
+      />
+      <div
+        style={lineStyle(ROW_HEIGHT * 2 + IMAGE_HEIGHT, 225, 2, lerp(0, IMAGE_GAP, evolutionsLineT))}
+      />
+      <img src={evolutions} alt="" width={450} style={imgStyle(ROW_HEIGHT * 3, 0, evolutionsRevealT)} />
+      <div
+        style={lineStyle(
+          ROW_HEIGHT * 3 + IMAGE_HEIGHT / 2,
+          450,
+          lerp(0, IMAGE_GAP, builderLinesT),
+          2,
+        )}
+      />
+      <div
+        style={lineStyle(ROW_HEIGHT * 2 + IMAGE_HEIGHT, 725, 2, lerp(0, IMAGE_GAP, builderLinesT))}
+      />
+      <img
+        src={evolutionBuilder}
+        alt=""
+        width={450}
+        style={imgStyle(ROW_HEIGHT * 3, 500, evolutionBuilderRevealT)}
+      />
+      <div
+        style={lineStyle(ROW_HEIGHT * 3 + IMAGE_HEIGHT, 225, 2, lerp(0, IMAGE_GAP, tacticsLineT))}
+      />
+      <img src={tactics} alt="" width={450} style={imgStyle(ROW_HEIGHT * 4, 0, tacticsRevealT)} />
+      <div
+        style={lineStyle(
+          ROW_HEIGHT * 4 + IMAGE_HEIGHT / 2,
+          450,
+          lerp(0, IMAGE_GAP, squadBuilderLinesT),
+          2,
+        )}
+      />
+      <div
+        style={lineStyle(
+          ROW_HEIGHT * 3 + IMAGE_HEIGHT,
+          725,
+          2,
+          lerp(0, IMAGE_GAP, squadBuilderLinesT),
+        )}
+      />
+      <img
+        src={squadBuilder}
+        alt=""
+        width={450}
+        style={imgStyle(ROW_HEIGHT * 4, 500, squadBuilderRevealT)}
+      />
+      <div
+        style={lineStyle(ROW_HEIGHT * 4 + IMAGE_HEIGHT, 225, 2, lerp(0, IMAGE_GAP, row6LinesT))}
+      />
+      <div
+        style={lineStyle(ROW_HEIGHT * 4 + IMAGE_HEIGHT, 725, 2, lerp(0, IMAGE_GAP, row6LinesT))}
+      />
+      <img
+        src={metaRatingExplainer}
+        alt=""
+        width={450}
+        style={imgStyle(ROW_HEIGHT * 5, 0, row6RevealT)}
+      />
+      <img
+        src={squadTactics}
+        alt=""
+        width={450}
+        style={imgStyle(ROW_HEIGHT * 5, 500, row6RevealT)}
+      />
+    </>
+  );
+}
+
 // smoothly blends between two hex colours, used to turn each word's text
 // green as its checkmark spawns in
 function lerpColor(hexA: string, hexB: string, t: number) {
@@ -998,29 +1204,14 @@ function App() {
   const outroT = clamp01((progress - TIMELINE_SCALE) / (1 - TIMELINE_SCALE));
   const BASE_SVG_END = 0.085; // outroT 0       -> 0.085: base SVG
   const DETAIL_SVG_END = 0.146; // outroT 0.085  -> 0.146: detail SVG
-  const HOME_PAGE_END = 0.216; // outroT 0.146   -> 0.216: home-page image
-  const LINE_END = 0.239; // outroT 0.216        -> 0.239: horizontal connector line
-  const SET_PAGE_END = 0.309; // outroT 0.239    -> 0.309: set-page image
-  const VLINE_END = 0.333; // outroT 0.309       -> 0.333: vertical connector line
+  // (everything from the home-page image onward — every screenshot and
+  // connector line's own timing — now lives inside ScreenshotMosaic below,
+  // driven by the same outroT passed in as its `t` prop; VLINE_END and
+  // ROW6_LINES_END are duplicated there too, just for the camera pan here)
+  const VLINE_END = 0.333; // outroT 0.309 -> 0.333: vertical connector line
   // (also where the continuous vertical camera pan begins — see cameraOffsetY below)
-  const SOLUTION_VIEW_END = 0.393; // outroT 0.333 -> 0.393: solution-view image
-  const CONVERGE_LINES_END = 0.44; // outroT 0.393 -> 0.44: the two lines to my_club
-  const MY_CLUB_END = 0.486; // outroT 0.44      -> 0.486: my_club image
-  const PLAYERS_LINE_END = 0.548; // outroT 0.486 -> 0.548: connector line down from my_club
-  const PLAYERS_END = 0.609; // outroT 0.548     -> 0.609: players image
-  const DETAIL_LINE_END = 0.641; // outroT 0.609 -> 0.641: connector line right from players
-  const DETAILED_PLAYER_VIEW_END = 0.711; // outroT 0.641 -> 0.711: detailed_player_view image
-  const EVOLUTIONS_LINE_END = 0.741; // outroT 0.711 -> 0.741: connector line down from players
-  const EVOLUTIONS_END = 0.798; // outroT 0.741 -> 0.798: evolutions image
-  const BUILDER_LINES_END = 0.832; // outroT 0.798 -> 0.832: the two lines to evolution_builder
-  const EVOLUTION_BUILDER_END = 0.866; // outroT 0.832 -> 0.866: evolution_builder image
-  const TACTICS_LINE_END = 0.884; // outroT 0.866 -> 0.884: connector line down from evolutions
-  const TACTICS_END = 0.912; // outroT 0.884 -> 0.912: tactics image
-  const SQUAD_BUILDER_LINES_END = 0.931; // outroT 0.912 -> 0.931: the two lines to squad_builder
-  const SQUAD_BUILDER_END = 0.96; // outroT 0.931 -> 0.96: squad_builder image
   const ROW6_LINES_END = 0.98; // outroT 0.96 -> 0.98: lines down from tactics and squad_builder
   // (also where the continuous camera pan finishes)
-  // outroT 0.98 -> 1: meta_rating_explainer + squad_tactics images (together)
   const IMAGE_GAP = 50; // px gap between images, reused for every gap
   const IMAGE_HEIGHT = 308.25; // rendered height of the 450px-wide 1200x822
   // screenshots (sbc_set_page, solution_view, my_club, players,
@@ -1028,47 +1219,15 @@ function App() {
   // squad_builder, meta_rating_explainer, squad_tactics) at that aspect
   // ratio
   const ROW_HEIGHT = IMAGE_HEIGHT + IMAGE_GAP; // vertical spacing between rows
+  // total height of the full 6-row mosaic, used to size the plain,
+  // normal-flow gallery section below the pinned canvas
+  const FULL_GALLERY_HEIGHT = ROW_HEIGHT * 5 + IMAGE_HEIGHT;
   const baseT = clamp01(outroT / BASE_SVG_END);
   const REVEAL_Y_START = 600; // illustration's own y position: travels from
   const REVEAL_Y_END = 80; // 600 (below the canvas) up to 80 (near the top)
   const revealY = lerp(REVEAL_Y_START, REVEAL_Y_END, baseT);
   const revealT = baseT;
   const detailRevealT = clamp01((outroT - BASE_SVG_END) / (DETAIL_SVG_END - BASE_SVG_END));
-  const homePageRevealT = clamp01((outroT - DETAIL_SVG_END) / (HOME_PAGE_END - DETAIL_SVG_END));
-  const lineT = clamp01((outroT - HOME_PAGE_END) / (LINE_END - HOME_PAGE_END));
-  const setPageRevealT = clamp01((outroT - LINE_END) / (SET_PAGE_END - LINE_END));
-  const vLineT = clamp01((outroT - SET_PAGE_END) / (VLINE_END - SET_PAGE_END));
-  const solutionViewRevealT = clamp01((outroT - VLINE_END) / (SOLUTION_VIEW_END - VLINE_END));
-  const convergeT = clamp01((outroT - SOLUTION_VIEW_END) / (CONVERGE_LINES_END - SOLUTION_VIEW_END));
-  const myClubRevealT = clamp01((outroT - CONVERGE_LINES_END) / (MY_CLUB_END - CONVERGE_LINES_END));
-  const playersLineT = clamp01((outroT - MY_CLUB_END) / (PLAYERS_LINE_END - MY_CLUB_END));
-  const playersRevealT = clamp01((outroT - PLAYERS_LINE_END) / (PLAYERS_END - PLAYERS_LINE_END));
-  const detailLineT = clamp01((outroT - PLAYERS_END) / (DETAIL_LINE_END - PLAYERS_END));
-  const detailedPlayerViewRevealT = clamp01(
-    (outroT - DETAIL_LINE_END) / (DETAILED_PLAYER_VIEW_END - DETAIL_LINE_END),
-  );
-  const evolutionsLineT = clamp01(
-    (outroT - DETAILED_PLAYER_VIEW_END) / (EVOLUTIONS_LINE_END - DETAILED_PLAYER_VIEW_END),
-  );
-  const evolutionsRevealT = clamp01(
-    (outroT - EVOLUTIONS_LINE_END) / (EVOLUTIONS_END - EVOLUTIONS_LINE_END),
-  );
-  const builderLinesT = clamp01((outroT - EVOLUTIONS_END) / (BUILDER_LINES_END - EVOLUTIONS_END));
-  const evolutionBuilderRevealT = clamp01(
-    (outroT - BUILDER_LINES_END) / (EVOLUTION_BUILDER_END - BUILDER_LINES_END),
-  );
-  const tacticsLineT = clamp01(
-    (outroT - EVOLUTION_BUILDER_END) / (TACTICS_LINE_END - EVOLUTION_BUILDER_END),
-  );
-  const tacticsRevealT = clamp01((outroT - TACTICS_LINE_END) / (TACTICS_END - TACTICS_LINE_END));
-  const squadBuilderLinesT = clamp01(
-    (outroT - TACTICS_END) / (SQUAD_BUILDER_LINES_END - TACTICS_END),
-  );
-  const squadBuilderRevealT = clamp01(
-    (outroT - SQUAD_BUILDER_LINES_END) / (SQUAD_BUILDER_END - SQUAD_BUILDER_LINES_END),
-  );
-  const row6LinesT = clamp01((outroT - SQUAD_BUILDER_END) / (ROW6_LINES_END - SQUAD_BUILDER_END));
-  const row6RevealT = clamp01((outroT - ROW6_LINES_END) / (1 - ROW6_LINES_END));
   // continuous vertical-only camera pan: no horizontal panning — each row
   // is 450px wide same as the canvas, so column 1 and column 2 are both
   // already roughly centered horizontally without any help. Vertically,
@@ -2179,426 +2338,7 @@ function App() {
                 </defs>
               </svg>
 
-              {/* home-page screenshot — same 450px width, absolutely
-                  positioned on top of both SVGs above, waiting until the
-                  detail SVG is fully visible before it starts fading in */}
-              <img
-                src={sbcHomePage}
-                alt=""
-                width={450}
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  width: 450,
-                  height: 'auto',
-                  zIndex: 2,
-                  opacity: homePageRevealT,
-                }}
-              />
-
-              {/* connector line — grows from sbc_home_page's right edge
-                  (x=450) across the 50px gap toward sbc_set_page's left
-                  edge, vertically centered on the images (~154, half of
-                  their ~308px rendered height). Once it's fully grown, the
-                  set-page image below starts fading in. */}
-              <div
-                style={{
-                  position: 'absolute',
-                  top: 154,
-                  left: 450,
-                  width: lerp(0, IMAGE_GAP, lineT),
-                  height: 2,
-                  backgroundColor: 'rgba(255, 255, 255, 0.6)',
-                  zIndex: 2,
-                }}
-              />
-
-              {/* set-page screenshot — same 450px width, positioned with a
-                  50px gap (IMAGE_GAP) after sbc_home_page. Waits until the
-                  connector line above has fully reached its position
-                  before it starts fading in. */}
-              <img
-                src={sbcSetPage}
-                alt=""
-                width={450}
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 450 + IMAGE_GAP,
-                  width: 450,
-                  height: 'auto',
-                  zIndex: 2,
-                  opacity: setPageRevealT,
-                }}
-              />
-
-              {/* vertical connector line — grows from sbc_set_page's
-                  bottom edge down across the 50px gap toward
-                  solution_view's top edge, horizontally centered on that
-                  column (left: 500 + 225 = 725). Once it's fully grown,
-                  solution_view starts fading in underneath. */}
-              <div
-                style={{
-                  position: 'absolute',
-                  top: IMAGE_HEIGHT,
-                  left: 450 + IMAGE_GAP + 225, // horizontal center of the 450-wide column
-                  width: 2,
-                  height: lerp(0, IMAGE_GAP, vLineT),
-                  backgroundColor: 'rgba(255, 255, 255, 0.6)',
-                  zIndex: 2,
-                }}
-              />
-
-              {/* solution_view screenshot — same 450px width, same left
-                  edge as sbc_set_page, sitting a 50px gap below it. Waits
-                  until the vertical connector line above has fully grown
-                  before it starts fading in. */}
-              <img
-                src={solutionView}
-                alt=""
-                width={450}
-                style={{
-                  position: 'absolute',
-                  top: IMAGE_HEIGHT + IMAGE_GAP,
-                  left: 450 + IMAGE_GAP,
-                  width: 450,
-                  height: 'auto',
-                  zIndex: 2,
-                  opacity: solutionViewRevealT,
-                }}
-              />
-
-              {/* two connector lines converging on my_club, growing at the
-                  same time (convergeT): one straight down from
-                  sbc_home_page's bottom edge, the other right-to-left from
-                  solution_view's left edge (anchored on the right at
-                  x=500, growing leftward) */}
-              <div
-                style={{
-                  position: 'absolute',
-                  top: IMAGE_HEIGHT,
-                  left: 225, // horizontal center of the sbc_home_page column
-                  width: 2,
-                  height: lerp(0, IMAGE_GAP, convergeT),
-                  backgroundColor: 'rgba(255, 255, 255, 0.6)',
-                  zIndex: 2,
-                }}
-              />
-              <div
-                style={{
-                  position: 'absolute',
-                  top: IMAGE_HEIGHT + IMAGE_GAP + IMAGE_HEIGHT / 2, // vertical center of row 2
-                  left: 500 - lerp(0, IMAGE_GAP, convergeT), // right edge fixed at 500, grows leftward
-                  width: lerp(0, IMAGE_GAP, convergeT),
-                  height: 2,
-                  backgroundColor: 'rgba(255, 255, 255, 0.6)',
-                  zIndex: 2,
-                }}
-              />
-
-              {/* my_club screenshot — same 450px width, sits below
-                  sbc_home_page (same left edge) and beside solution_view
-                  (same row), where the two connector lines above meet.
-                  Waits until both lines have fully grown before it starts
-                  fading in. */}
-              <img
-                src={myClub}
-                alt=""
-                width={450}
-                style={{
-                  position: 'absolute',
-                  top: IMAGE_HEIGHT + IMAGE_GAP,
-                  left: 0,
-                  width: 450,
-                  height: 'auto',
-                  zIndex: 2,
-                  opacity: myClubRevealT,
-                }}
-              />
-
-              {/* connector line down from my_club to players (row 3),
-                  same column (left: 225, center of the row 1/2/3 column) */}
-              <div
-                style={{
-                  position: 'absolute',
-                  top: ROW_HEIGHT + IMAGE_HEIGHT, // my_club's bottom edge
-                  left: 225,
-                  width: 2,
-                  height: lerp(0, IMAGE_GAP, playersLineT),
-                  backgroundColor: 'rgba(255, 255, 255, 0.6)',
-                  zIndex: 2,
-                }}
-              />
-
-              {/* players screenshot — row 3, same left edge as my_club and
-                  sbc_home_page. Waits until the camera has finished
-                  panning and the connector line above has fully grown. */}
-              <img
-                src={players}
-                alt=""
-                width={450}
-                style={{
-                  position: 'absolute',
-                  top: ROW_HEIGHT * 2,
-                  left: 0,
-                  width: 450,
-                  height: 'auto',
-                  zIndex: 2,
-                  opacity: playersRevealT,
-                }}
-              />
-
-              {/* connector line right from players to detailed_player_view,
-                  same row (top: ROW_HEIGHT*2 + IMAGE_HEIGHT/2, vertical
-                  center of row 3), growing left-to-right like the very
-                  first connector line */}
-              <div
-                style={{
-                  position: 'absolute',
-                  top: ROW_HEIGHT * 2 + IMAGE_HEIGHT / 2,
-                  left: 450,
-                  width: lerp(0, IMAGE_GAP, detailLineT),
-                  height: 2,
-                  backgroundColor: 'rgba(255, 255, 255, 0.6)',
-                  zIndex: 2,
-                }}
-              />
-
-              {/* detailed_player_view screenshot — same 450px width, same
-                  row as players, 50px gap to its right. Waits until the
-                  connector line above has fully grown before fading in. */}
-              <img
-                src={detailedPlayerView}
-                alt=""
-                width={450}
-                style={{
-                  position: 'absolute',
-                  top: ROW_HEIGHT * 2,
-                  left: 450 + IMAGE_GAP,
-                  width: 450,
-                  height: 'auto',
-                  zIndex: 2,
-                  opacity: detailedPlayerViewRevealT,
-                }}
-              />
-
-              {/* connector line down from players to evolutions (row 4),
-                  same column (left: 225, center of the column-1 images) */}
-              <div
-                style={{
-                  position: 'absolute',
-                  top: ROW_HEIGHT * 2 + IMAGE_HEIGHT, // players' bottom edge
-                  left: 225,
-                  width: 2,
-                  height: lerp(0, IMAGE_GAP, evolutionsLineT),
-                  backgroundColor: 'rgba(255, 255, 255, 0.6)',
-                  zIndex: 2,
-                }}
-              />
-
-              {/* evolutions screenshot — row 4, same left edge as players/
-                  my_club/sbc_home_page. Waits until the connector line
-                  above has fully grown before it starts fading in. */}
-              <img
-                src={evolutions}
-                alt=""
-                width={450}
-                style={{
-                  position: 'absolute',
-                  top: ROW_HEIGHT * 3,
-                  left: 0,
-                  width: 450,
-                  height: 'auto',
-                  zIndex: 2,
-                  opacity: evolutionsRevealT,
-                }}
-              />
-
-              {/* two connector lines growing at once, converging on
-                  evolution_builder's position (row 4, column 2): one
-                  right from evolutions, one down from
-                  detailed_player_view */}
-              <div
-                style={{
-                  position: 'absolute',
-                  top: ROW_HEIGHT * 3 + IMAGE_HEIGHT / 2,
-                  left: 450, // evolutions' right edge
-                  width: lerp(0, IMAGE_GAP, builderLinesT),
-                  height: 2,
-                  backgroundColor: 'rgba(255, 255, 255, 0.6)',
-                  zIndex: 2,
-                }}
-              />
-              <div
-                style={{
-                  position: 'absolute',
-                  top: ROW_HEIGHT * 2 + IMAGE_HEIGHT, // detailed_player_view's bottom edge
-                  left: 725, // center of column 2 (500 + 225)
-                  width: 2,
-                  height: lerp(0, IMAGE_GAP, builderLinesT),
-                  backgroundColor: 'rgba(255, 255, 255, 0.6)',
-                  zIndex: 2,
-                }}
-              />
-
-              {/* evolution_builder screenshot — row 4, column 2, same
-                  left edge as sbc_set_page/solution_view/
-                  detailed_player_view. Waits until both lines above have
-                  fully grown before it starts fading in. */}
-              <img
-                src={evolutionBuilder}
-                alt=""
-                width={450}
-                style={{
-                  position: 'absolute',
-                  top: ROW_HEIGHT * 3,
-                  left: 500,
-                  width: 450,
-                  height: 'auto',
-                  zIndex: 2,
-                  opacity: evolutionBuilderRevealT,
-                }}
-              />
-
-              {/* connector line down from evolutions to tactics (row 5),
-                  same column (left: 225, center of the column-1 images) */}
-              <div
-                style={{
-                  position: 'absolute',
-                  top: ROW_HEIGHT * 3 + IMAGE_HEIGHT, // evolutions' bottom edge
-                  left: 225,
-                  width: 2,
-                  height: lerp(0, IMAGE_GAP, tacticsLineT),
-                  backgroundColor: 'rgba(255, 255, 255, 0.6)',
-                  zIndex: 2,
-                }}
-              />
-
-              {/* tactics screenshot — row 5, same left edge as evolutions/
-                  players/my_club/sbc_home_page. Waits until the connector
-                  line above has fully grown before it starts fading in. */}
-              <img
-                src={tactics}
-                alt=""
-                width={450}
-                style={{
-                  position: 'absolute',
-                  top: ROW_HEIGHT * 4,
-                  left: 0,
-                  width: 450,
-                  height: 'auto',
-                  zIndex: 2,
-                  opacity: tacticsRevealT,
-                }}
-              />
-
-              {/* two connector lines growing at once, converging on
-                  squad_builder's position (row 5, column 2): one right
-                  from tactics, one down from evolution_builder */}
-              <div
-                style={{
-                  position: 'absolute',
-                  top: ROW_HEIGHT * 4 + IMAGE_HEIGHT / 2,
-                  left: 450, // tactics' right edge
-                  width: lerp(0, IMAGE_GAP, squadBuilderLinesT),
-                  height: 2,
-                  backgroundColor: 'rgba(255, 255, 255, 0.6)',
-                  zIndex: 2,
-                }}
-              />
-              <div
-                style={{
-                  position: 'absolute',
-                  top: ROW_HEIGHT * 3 + IMAGE_HEIGHT, // evolution_builder's bottom edge
-                  left: 725, // center of column 2 (500 + 225)
-                  width: 2,
-                  height: lerp(0, IMAGE_GAP, squadBuilderLinesT),
-                  backgroundColor: 'rgba(255, 255, 255, 0.6)',
-                  zIndex: 2,
-                }}
-              />
-
-              {/* squad_builder screenshot — row 5, column 2, same left
-                  edge as sbc_set_page/solution_view/detailed_player_view/
-                  evolution_builder. Waits until both lines above have
-                  fully grown before it starts fading in. */}
-              <img
-                src={squadBuilder}
-                alt=""
-                width={450}
-                style={{
-                  position: 'absolute',
-                  top: ROW_HEIGHT * 4,
-                  left: 500,
-                  width: 450,
-                  height: 'auto',
-                  zIndex: 2,
-                  opacity: squadBuilderRevealT,
-                }}
-              />
-
-              {/* two connector lines growing at once, down from tactics
-                  (column 1) and down from squad_builder (column 2), each
-                  leading to row 6's images */}
-              <div
-                style={{
-                  position: 'absolute',
-                  top: ROW_HEIGHT * 4 + IMAGE_HEIGHT, // tactics' bottom edge
-                  left: 225,
-                  width: 2,
-                  height: lerp(0, IMAGE_GAP, row6LinesT),
-                  backgroundColor: 'rgba(255, 255, 255, 0.6)',
-                  zIndex: 2,
-                }}
-              />
-              <div
-                style={{
-                  position: 'absolute',
-                  top: ROW_HEIGHT * 4 + IMAGE_HEIGHT, // squad_builder's bottom edge
-                  left: 725,
-                  width: 2,
-                  height: lerp(0, IMAGE_GAP, row6LinesT),
-                  backgroundColor: 'rgba(255, 255, 255, 0.6)',
-                  zIndex: 2,
-                }}
-              />
-
-              {/* meta_rating_explainer — row 6, column 1, underneath
-                  tactics. Fades in together with squad_tactics once both
-                  lines above have fully grown. */}
-              <img
-                src={metaRatingExplainer}
-                alt=""
-                width={450}
-                style={{
-                  position: 'absolute',
-                  top: ROW_HEIGHT * 5,
-                  left: 0,
-                  width: 450,
-                  height: 'auto',
-                  zIndex: 2,
-                  opacity: row6RevealT,
-                }}
-              />
-
-              {/* squad_tactics — row 6, column 2, underneath
-                  squad_builder. Fades in together with
-                  meta_rating_explainer. */}
-              <img
-                src={squadTactics}
-                alt=""
-                width={450}
-                style={{
-                  position: 'absolute',
-                  top: ROW_HEIGHT * 5,
-                  left: 500,
-                  width: 450,
-                  height: 'auto',
-                  zIndex: 2,
-                  opacity: row6RevealT,
-                }}
-              />
+              <ScreenshotMosaic t={outroT} />
               </div>
             </div>
 
@@ -2621,6 +2361,20 @@ function App() {
               so the finished state — grid included — stays on screen. */}
           <div className="h-[60vh]" aria-hidden />
         </div>
+      </div>
+
+      {/* once the pinned canvas above finishes spawning, its sticky pin
+          naturally releases (it's run out of room inside the grid row
+          above) and this plain, normal-flow block takes over — same full
+          mosaic, always fully revealed (t=1), but no camera pan and no
+          clipping, so it's just regular scrollable content: scroll down
+          to move through all the images, scroll back up past its top edge
+          to re-enter the pinned canvas's own scroll range, where the
+          shared timeline (outroT) drives the images back down and the
+          spawn plays in reverse — vanishing, then respawning if you
+          scroll forward again. */}
+      <div className="relative mx-auto" style={{ width: 950, maxWidth: '100%', height: FULL_GALLERY_HEIGHT }}>
+        <ScreenshotMosaic t={1} />
       </div>
     </div>
   );
