@@ -19,7 +19,7 @@ import squadTactics from './assets/squad_tactics.png';
 // pick up the smoothed motion.
 function useLenis() {
   useEffect(() => {
-    const lenis = new Lenis();
+    const lenis = new Lenis({ duration: 1.0, wheelMultiplier: 1.15, touchMultiplier: 1.15 });
     let rafId: number;
     function raf(time: number) {
       lenis.raf(time);
@@ -1255,12 +1255,18 @@ function App() {
             ? SEC4_END
             : 1;
   const sectionActiveStart = activeSection * SECTION_LEN;
+  // the roll-in only uses the first slice of the section's active window
+  // (rather than the whole thing) so the text finishes arriving well
+  // before the animation actually pauses — meaning it sits fully
+  // snapped/settled for the rest of that active window *and* the pause
+  // after it, instead of only being settled for the brief pause itself.
+  const TEXT_ROLL_FRACTION = 0.45;
+  const sectionRollEnd =
+    sectionActiveStart + (sectionActiveEnd - sectionActiveStart) * TEXT_ROLL_FRACTION;
   const sectionProgress =
     activeSection === 0
       ? 0
-      : activeSection -
-        1 +
-        clamp01((progress - sectionActiveStart) / (sectionActiveEnd - sectionActiveStart));
+      : activeSection - 1 + clamp01((progress - sectionActiveStart) / (sectionRollEnd - sectionActiveStart));
 
   // where the "anchor" point of the stack currently sits, in the same
   // cumulativeTop px units — interpolated between the two neighboring
