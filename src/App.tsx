@@ -2,6 +2,7 @@ import { Fragment, useEffect, useRef, useState } from 'react';
 import Lenis from 'lenis';
 import sbcHomePage from './assets/sbc_home_page.png';
 import sbcSetPage from './assets/sbc_set_page.png';
+import solutionView from './assets/solution_view.png';
 
 // drives smooth/eased scrolling site-wide. Lenis animates the native scroll
 // position itself (window.scrollTo under the hood), so it still dispatches
@@ -949,22 +950,25 @@ function App() {
   const check2Local = clamp01((checksT - 1 / 3) / (1 / 3));
   const check3Local = clamp01((checksT - 2 / 3) / (1 / 3));
 
-  // outro is split into five back-to-back parts of outroT: base SVG spawns
-  // and moves (baseT), then the detailed SVG fades in on top of it once
-  // that's settled (detailRevealT), then the home-page image fades in once
-  // that's fully visible (homePageRevealT). Then, instead of the set-page
-  // image just appearing, a connector line grows from the home-page
-  // image's right edge across the 50px gap (lineT) — only once the line
-  // has fully reached the set-page image's position does that image start
-  // fading in (setPageRevealT). Each stage waits for the previous one to
-  // completely finish before it starts.
+  // outro is split into seven back-to-back parts of outroT — each stage
+  // waits for the previous one to completely finish before it starts:
+  // base SVG spawns + moves (baseT) -> detail SVG fades in on top
+  // (detailRevealT) -> home-page image fades in (homePageRevealT) ->
+  // horizontal connector line grows across the gap (lineT) -> set-page
+  // image fades in beside it (setPageRevealT) -> vertical connector line
+  // grows down from set-page (vLineT) -> solution-view image fades in
+  // underneath it (solutionViewRevealT).
   const outroT = clamp01((progress - TIMELINE_SCALE) / (1 - TIMELINE_SCALE));
-  const BASE_SVG_END = 0.25; // outroT 0     -> 0.25: base SVG
-  const DETAIL_SVG_END = 0.45; // outroT 0.25 -> 0.45: detail SVG
-  const HOME_PAGE_END = 0.65; // outroT 0.45  -> 0.65: home-page image
-  const LINE_END = 0.78; // outroT 0.65       -> 0.78: connector line grows
-  // outroT 0.78 -> 1: set-page image
-  const IMAGE_GAP = 50; // px gap between sbc_home_page and sbc_set_page
+  const BASE_SVG_END = 0.2; // outroT 0     -> 0.2:  base SVG
+  const DETAIL_SVG_END = 0.35; // outroT 0.2 -> 0.35: detail SVG
+  const HOME_PAGE_END = 0.5; // outroT 0.35  -> 0.5:  home-page image
+  const LINE_END = 0.58; // outroT 0.5       -> 0.58: horizontal connector line
+  const SET_PAGE_END = 0.72; // outroT 0.58  -> 0.72: set-page image
+  const VLINE_END = 0.8; // outroT 0.72      -> 0.8:  vertical connector line
+  // outroT 0.8 -> 1: solution-view image
+  const IMAGE_GAP = 50; // px gap between images, reused for every gap
+  const IMAGE_HEIGHT = 308.25; // rendered height of the 450px-wide 1200x822
+  // screenshots (sbc_set_page, solution_view) at that aspect ratio
   const baseT = clamp01(outroT / BASE_SVG_END);
   const REVEAL_Y_START = 600; // illustration's own y position: travels from
   const REVEAL_Y_END = 80; // 600 (below the canvas) up to 80 (near the top)
@@ -973,7 +977,9 @@ function App() {
   const detailRevealT = clamp01((outroT - BASE_SVG_END) / (DETAIL_SVG_END - BASE_SVG_END));
   const homePageRevealT = clamp01((outroT - DETAIL_SVG_END) / (HOME_PAGE_END - DETAIL_SVG_END));
   const lineT = clamp01((outroT - HOME_PAGE_END) / (LINE_END - HOME_PAGE_END));
-  const setPageRevealT = clamp01((outroT - LINE_END) / (1 - LINE_END));
+  const setPageRevealT = clamp01((outroT - LINE_END) / (SET_PAGE_END - LINE_END));
+  const vLineT = clamp01((outroT - SET_PAGE_END) / (VLINE_END - SET_PAGE_END));
+  const solutionViewRevealT = clamp01((outroT - VLINE_END) / (1 - VLINE_END));
   // outgoing content rises the same distance (520px) over the same baseT
   // range as the base SVG above (both driven by baseT, not raw outroT),
   // so the two stay synced/matched-rate through the whole exit
@@ -2108,6 +2114,42 @@ function App() {
                   height: 'auto',
                   zIndex: 2,
                   opacity: setPageRevealT,
+                }}
+              />
+
+              {/* vertical connector line — grows from sbc_set_page's
+                  bottom edge down across the 50px gap toward
+                  solution_view's top edge, horizontally centered on that
+                  column (left: 500 + 225 = 725). Once it's fully grown,
+                  solution_view starts fading in underneath. */}
+              <div
+                style={{
+                  position: 'absolute',
+                  top: IMAGE_HEIGHT,
+                  left: 450 + IMAGE_GAP + 225, // horizontal center of the 450-wide column
+                  width: 2,
+                  height: lerp(0, IMAGE_GAP, vLineT),
+                  backgroundColor: 'rgba(255, 255, 255, 0.6)',
+                  zIndex: 2,
+                }}
+              />
+
+              {/* solution_view screenshot — same 450px width, same left
+                  edge as sbc_set_page, sitting a 50px gap below it. Waits
+                  until the vertical connector line above has fully grown
+                  before it starts fading in. */}
+              <img
+                src={solutionView}
+                alt=""
+                width={450}
+                style={{
+                  position: 'absolute',
+                  top: IMAGE_HEIGHT + IMAGE_GAP,
+                  left: 450 + IMAGE_GAP,
+                  width: 450,
+                  height: 'auto',
+                  zIndex: 2,
+                  opacity: solutionViewRevealT,
                 }}
               />
             </div>
