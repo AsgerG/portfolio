@@ -858,40 +858,46 @@ function App() {
   useLenis();
   const { ref, progress } = useScrollProgress<HTMLDivElement>();
 
-  // the whole original sequence below is compressed into 0 -> 0.85 (every
-  // threshold and span scaled by TIMELINE_SCALE, preserving how each stage
-  // hands off to the next), freeing up TIMELINE_SCALE -> 1 for the new
-  // outro stage: everything scrolls up and vanishes, revealing the new
-  // illustration underneath. TIMELINE_SCALE closer to 1 = a shorter,
-  // faster outro (less of the scroll devoted to it).
+  // the whole original sequence below is compressed into 0 -> 0.75 (every
+  // threshold and span rescaled so section 1, section 2, and section 3
+  // each land on an equal third of that range — 25% of the total scroll
+  // apiece), freeing up TIMELINE_SCALE -> 1 for the outro (also 25%):
+  // everything scrolls up and vanishes, revealing the new illustration +
+  // screenshot mosaic underneath. All four sections now get the same
+  // share of scroll, instead of section 1 alone eating up roughly half.
   //
-  // 0    -> 0.07: circles appear next to the logo
-  // 0.07 -> 0.11: logo fades out, circles slide into their grid layout
-  // 0.11 -> 0.21: white slides right, the greyscale spawns in along the way
-  // 0.21 -> 0.29: blue steps right, three shades of blue spawn in around it
-  // 0.29 -> 0.39: the teal row + purple circle spawn underneath the blue row
-  // 0.39 -> 0.5:  the signal group (green + red) spawns underneath that
-  // 0.5  -> 0.7:  all five rows form together, as everything unclaimed
-  //               fades away
-  // 0.7  -> 0.85: every circle in a row morphs into that row's shape
-  // 0.85 -> 1:    row 1's swatches restack into overlapping cards
+  // 0      -> 0.0467: circles appear next to the logo
+  // 0.0467 -> 0.0733: logo fades out, circles slide into their grid layout
+  // 0.0733 -> 0.14:   white slides right, the greyscale spawns in along the way
+  // 0.14   -> 0.1933: blue steps right, three shades of blue spawn in around it
+  // 0.1933 -> 0.26:   the teal row + purple circle spawn underneath the blue row
+  // 0.26   -> 0.3333: the signal group (green + red) spawns underneath that
+  // (section 1: color palette, 0 -> 0.3333, i.e. 0 -> 0.25 of total scroll)
+  // 0.3333 -> 0.5238: all five rows form together, as everything unclaimed
+  //                   fades away
+  // 0.5238 -> 0.6667: every circle in a row morphs into that row's shape
+  // (section 2: color semantics, 0.3333 -> 0.6667, i.e. 0.25 -> 0.5 of total)
+  // 0.6667 -> 1:      row 1's swatches restack into overlapping cards
+  // (section 3: UI components, 0.6667 -> 1, i.e. 0.5 -> 0.75 of total)
   // (all scaled by TIMELINE_SCALE)
-  // 0.85 -> 1:    outro — everything scrolls up and fades out, the new
-  //               illustration fades in underneath
-  const TIMELINE_SCALE = 0.95; // was 0.85, then 0.93 — shrinks the outro's
-  // scroll range further (7% -> 5% of the total). The exit/reveal still
+  // 0.75 -> 1: outro — everything scrolls up and fades out, the new
+  //            illustration + screenshot mosaic reveal underneath
+  // (section 4: wireframes & overview, i.e. 0.75 -> 1 of total)
+  const TIMELINE_SCALE = 0.75; // was 0.95 — the outro (and each of the
+  // other three sections) now gets an even 25% of the total scroll,
+  // instead of section 1 taking up roughly half. The exit/reveal still
   // travel the same pixel distances (EXIT_LIFT, REVEAL_Y_START/END below),
-  // just packed into less scroll, closing the gap between them.
-  const appearEnd = 0.07 * TIMELINE_SCALE;
-  const moveT = clamp01((progress - appearEnd) / (0.04 * TIMELINE_SCALE));
-  const spawnT = clamp01((progress - 0.11 * TIMELINE_SCALE) / (0.1 * TIMELINE_SCALE));
+  // just spread across a bigger scroll range now that the outro has room.
+  const appearEnd = 0.0467 * TIMELINE_SCALE;
+  const moveT = clamp01((progress - appearEnd) / (0.0267 * TIMELINE_SCALE));
+  const spawnT = clamp01((progress - 0.0733 * TIMELINE_SCALE) / (0.0667 * TIMELINE_SCALE));
   const svgOpacity = 1 - moveT;
 
   // "Neutrals" fades in once the new shades of grey start appearing,
   // not while black and white are just settling into the grid
   const neutralsLabelLocal = spawnT;
 
-  const stageD = clamp01((progress - 0.21 * TIMELINE_SCALE) / (0.08 * TIMELINE_SCALE));
+  const stageD = clamp01((progress - 0.14 * TIMELINE_SCALE) / (0.0533 * TIMELINE_SCALE));
   const blueMoveT = clamp01(stageD / 0.35);
   const blueLeftLocal = clamp01((stageD - 0.15) / 0.35);
   const blueRight1Local = clamp01((stageD - 0.45) / 0.35);
@@ -902,7 +908,7 @@ function App() {
 
   // the teal row and the purple circle unfold together: the row cascades
   // left to right, while purple starts at the same moment as the first dot
-  const stageRows = clamp01((progress - 0.29 * TIMELINE_SCALE) / (0.1 * TIMELINE_SCALE));
+  const stageRows = clamp01((progress - 0.1933 * TIMELINE_SCALE) / (0.0667 * TIMELINE_SCALE));
   const teal0Local = clamp01(stageRows / 0.5);
   const teal1Local = clamp01((stageRows - 0.15) / 0.5);
   const teal2Local = clamp01((stageRows - 0.3) / 0.5);
@@ -912,7 +918,7 @@ function App() {
   const analogousLabelLocal = clamp01(stageRows / 0.5);
 
   // green and red spawn in together
-  const stageSignal = clamp01((progress - 0.39 * TIMELINE_SCALE) / (0.11 * TIMELINE_SCALE));
+  const stageSignal = clamp01((progress - 0.26 * TIMELINE_SCALE) / (0.0733 * TIMELINE_SCALE));
   const greenLocal = clamp01(stageSignal / 0.6);
   const redLocal = clamp01(stageSignal / 0.6);
 
@@ -921,35 +927,35 @@ function App() {
 
   // all five rows form together, then every claimed circle morphs into
   // its row's rectangular shape
-  const stageRowAll = clamp01((progress - 0.5 * TIMELINE_SCALE) / (0.2 * TIMELINE_SCALE));
+  const stageRowAll = clamp01((progress - 0.3333 * TIMELINE_SCALE) / (0.1905 * TIMELINE_SCALE));
   const stageRow1 = stageRowAll;
   const stageRow2 = stageRowAll;
   const stageRow3 = stageRowAll;
   const stageRow4 = stageRowAll;
   const stageRow5 = stageRowAll;
-  const morphT = clamp01((progress - 0.7 * TIMELINE_SCALE) / (0.15 * TIMELINE_SCALE));
+  const morphT = clamp01((progress - 0.5238 * TIMELINE_SCALE) / (0.1429 * TIMELINE_SCALE));
 
   // row 1's swatches restack into overlapping cards, row 2's text frames
   // onto the first card, and row 3's buttons frame onto the duplicate stack
-  const stackT = clamp01((progress - 0.85 * TIMELINE_SCALE) / (0.04 * TIMELINE_SCALE));
+  const stackT = clamp01((progress - 0.6667 * TIMELINE_SCALE) / (0.0889 * TIMELINE_SCALE));
 
   // only once that initial move settles does row 2's text duplicate and
   // the copy shift down to sit framed against the stack's second card
-  const textDupT = clamp01((progress - 0.89 * TIMELINE_SCALE) / (0.03 * TIMELINE_SCALE));
+  const textDupT = clamp01((progress - 0.7556 * TIMELINE_SCALE) / (0.0667 * TIMELINE_SCALE));
 
   // then, once that second copy settles, it duplicates again and the new
   // copy shifts down another 43px to sit framed against the third card
-  const textDupT2 = clamp01((progress - 0.92 * TIMELINE_SCALE) / (0.03 * TIMELINE_SCALE));
+  const textDupT2 = clamp01((progress - 0.8222 * TIMELINE_SCALE) / (0.0667 * TIMELINE_SCALE));
 
   // then, three words spawn in underneath the stacked groups, one at a time
-  const wordsT = clamp01((progress - 0.95 * TIMELINE_SCALE) / (0.025 * TIMELINE_SCALE));
+  const wordsT = clamp01((progress - 0.8889 * TIMELINE_SCALE) / (0.0556 * TIMELINE_SCALE));
   const word1Local = clamp01(wordsT / (1 / 3));
   const word2Local = clamp01((wordsT - 1 / 3) / (1 / 3));
   const word3Local = clamp01((wordsT - 2 / 3) / (1 / 3));
 
   // finally, once those words have all spawned, a green checkmark appears
   // to the left of each one, one at a time, and its text turns to match
-  const checksT = clamp01((progress - 0.975 * TIMELINE_SCALE) / (0.025 * TIMELINE_SCALE));
+  const checksT = clamp01((progress - 0.9444 * TIMELINE_SCALE) / (0.0556 * TIMELINE_SCALE));
   const check1Local = clamp01(checksT / (1 / 3));
   const check2Local = clamp01((checksT - 1 / 3) / (1 / 3));
   const check3Local = clamp01((checksT - 2 / 3) / (1 / 3));
@@ -1106,7 +1112,7 @@ function App() {
   const row2BgAlpha = 1 - clamp01((morphT - 0.6) / 0.4);
 
   // everything not claimed by a row fades away early in that sequence
-  const fade = 1 - clamp01((progress - 0.5 * TIMELINE_SCALE) / (0.15 * TIMELINE_SCALE));
+  const fade = 1 - clamp01((progress - 0.3333 * TIMELINE_SCALE) / (0.1429 * TIMELINE_SCALE));
 
   const rowStageByColor: Record<string, number> = {
     '#121212': stageRow1,
@@ -1125,16 +1131,15 @@ function App() {
   };
 
   // four named sections across the whole scroll, for the readout next to
-  // the progress counter below — boundaries line up with existing stage
-  // transitions (colors finish spawning at 0.5*TIMELINE_SCALE, morph into
-  // shapes by 0.85*TIMELINE_SCALE, stack into components by
-  // TIMELINE_SCALE, then the outro takes over for the rest)
+  // the progress counter below — now an even quarter each (0.25 apiece),
+  // since the stage boundaries above were rescaled so section 1 no longer
+  // eats up roughly half the animation
   const sectionName =
-    progress < 0.5 * TIMELINE_SCALE
+    progress < 0.25
       ? 'Part 1: Color palette'
-      : progress < 0.85 * TIMELINE_SCALE
+      : progress < 0.5
         ? 'Part 2: Color semantics'
-        : progress < TIMELINE_SCALE
+        : progress < 0.75
           ? 'Part 3: UI components'
           : 'Part 4: Wireframes & overview';
 
@@ -1145,10 +1150,10 @@ function App() {
   // sticky) for the rest of that section, instead of animating in slowly
   // across the whole thing.
   const SECTION_RANGES: [number, number][] = [
-    [0, 0.5 * TIMELINE_SCALE],
-    [0.5 * TIMELINE_SCALE, 0.85 * TIMELINE_SCALE],
-    [0.85 * TIMELINE_SCALE, TIMELINE_SCALE],
-    [TIMELINE_SCALE, 1],
+    [0, 0.25],
+    [0.25, 0.5],
+    [0.5, 0.75],
+    [0.75, 1],
   ];
   const ROLL_IN_FRACTION = 0.15;
   const sectionRollT = SECTION_RANGES.map(([start, end]) =>
@@ -2659,26 +2664,17 @@ function App() {
           </div>
         </div>
 
-        {/* case-study copy, one block per section. Each block lives in its
-            own container sized proportionally to that section's share of
-            the scroll (230vh / 161vh / 69vh / 25vh — matching the
-            0.475 / 0.3325 / 0.1425 / 0.05 fractions of total progress from
-            SECTION_RANGES above, scaled to roughly the same total budget
-            the old spacer-based layout used), with a sticky child that
-            pins it to the top of the viewport for that whole span — same
-            pinning mechanism as the animation canvas beside it. The text
-            itself rolls in (fades + slides up) over just the first 15% of
-            its own section via sectionRollT, then holds still, fully
-            visible, for the rest — instead of never animating at all.
-            Note: section 4's container (25vh) is shorter than the
-            sticky child's own h-screen height, so it barely gets any pin
-            time before handing off to the trailing buffer — expected,
-            since that section is only 5% of the whole scroll. These
-            heights are estimates from the stage boundaries, not
-            pixel-measured against a live preview, so they may need a
-            follow-up pass once this can be checked in the browser. */}
+        {/* case-study copy, one block per section. Each section is now an
+            equal quarter of the total scroll (see SECTION_RANGES above),
+            so all four containers get the same height (121vh — matching
+            roughly the same total budget the old proportional layout
+            used), each with a sticky child that pins it to the top of the
+            viewport for that whole span — same pinning mechanism as the
+            animation canvas beside it. The text itself rolls in (fades +
+            slides up) over just the first 15% of its own section via
+            sectionRollT, then holds still, fully visible, for the rest. */}
         <div className="flex flex-col text-white/70 text-lg max-w-md">
-          <div style={{ height: '230vh' }}>
+          <div style={{ height: '121vh' }}>
             <div className="sticky top-0 h-screen flex items-center px-12">
               <p
                 style={{
@@ -2690,7 +2686,7 @@ function App() {
               </p>
             </div>
           </div>
-          <div style={{ height: '161vh' }}>
+          <div style={{ height: '121vh' }}>
             <div className="sticky top-0 h-screen flex items-center px-12">
               <p
                 style={{
@@ -2702,7 +2698,7 @@ function App() {
               </p>
             </div>
           </div>
-          <div style={{ height: '69vh' }}>
+          <div style={{ height: '121vh' }}>
             <div className="sticky top-0 h-screen flex items-center px-12">
               <p
                 style={{
@@ -2714,7 +2710,7 @@ function App() {
               </p>
             </div>
           </div>
-          <div style={{ height: '25vh' }}>
+          <div style={{ height: '121vh' }}>
             <div className="sticky top-0 h-screen flex items-center px-12">
               <p
                 style={{
