@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import Lenis from 'lenis';
 import sbcHomePage from './assets/sbc_home_page.png';
 import sbcSetPage from './assets/sbc_set_page.png';
@@ -859,6 +859,24 @@ function App() {
   useLenis();
   const { ref, progress } = useScrollProgress<HTMLDivElement>();
 
+  // real rendered height of each text block, measured directly rather
+  // than assumed — since the blocks wrap to different numbers of lines,
+  // a fixed slot spacing means the *gap* between blocks (as opposed to
+  // the spacing between their centers/tops) isn't actually equal. These
+  // heights feed the cumulative stacking math below so the visual gap
+  // between one block's bottom and the next one's top is a constant,
+  // regardless of how tall either block is.
+  const textRefs = useRef<(HTMLParagraphElement | null)[]>([]);
+  const [textHeights, setTextHeights] = useState<number[]>(() => sectionCopy.map(() => 0));
+  useLayoutEffect(() => {
+    function measure() {
+      setTextHeights(sectionCopy.map((_, i) => textRefs.current[i]?.offsetHeight ?? 0));
+    }
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, []);
+
   // five equal sections now split the whole scroll — color palette,
   // color semantics, UI components, wireframes, and overview — each
   // exactly SECTION_LEN (1/5) of total progress, and each hands off to
@@ -1197,12 +1215,25 @@ function App() {
   // with that same edge, rather than a fixed pixel value, so it always
   // lines up with the top of the animation regardless of viewport height.
   const CANVAS_HEIGHT = 560;
-  // vertical spacing between each section's slot in the text stack below.
-  // The longest paragraph (section 1, ~97 words) wraps to roughly 12
-  // lines at max-w-md/text-lg (~28px line-height), i.e. ~340px tall —
-  // 440px leaves enough headroom that the fully-visible active block
-  // never visually collides with its dimmed neighbors above/below.
-  const TEXT_ITEM_GAP = 440;
+  // constant visual gap between the bottom of one text block and the top
+  // of the next — unlike a fixed slot spacing, this stays the same
+  // regardless of how many lines either block wraps to, since it's added
+  // on top of each block's own measured height (see cumulativeTop below)
+  // rather than baked into one shared spacing value.
+  const TEXT_GAP = 64;
+  // running top position of each block if they were simply stacked one
+  // after another (block 0 at 0, block 1 right after block 0's real
+  // height + TEXT_GAP, and so on) — computed from the measured heights
+  // above, so it automatically adapts to however long each paragraph
+  // actually is.
+  const cumulativeTop: number[] = [];
+  {
+    let acc = 0;
+    for (let i = 0; i < sectionCopy.length; i++) {
+      cumulativeTop.push(acc);
+      acc += (textHeights[i] || 0) + TEXT_GAP;
+    }
+  }
 
   // continuous 0..4 position driving the text stack below — derived
   // directly from scroll progress (not a fixed-duration CSS transition),
@@ -1230,6 +1261,22 @@ function App() {
       : activeSection -
         1 +
         clamp01((progress - sectionActiveStart) / (sectionActiveEnd - sectionActiveStart));
+
+  // where the "anchor" point of the stack currently sits, in the same
+  // cumulativeTop px units — interpolated between the two neighboring
+  // blocks' real cumulative positions using sectionProgress's fractional
+  // part, so the whole stack still slides smoothly between real,
+  // unevenly-sized blocks instead of jumping.
+  const activeTopOffsetLowIndex = Math.max(
+    0,
+    Math.min(sectionCopy.length - 1, Math.floor(sectionProgress)),
+  );
+  const activeTopOffsetHighIndex = Math.min(sectionCopy.length - 1, activeTopOffsetLowIndex + 1);
+  const activeTopOffsetFrac = sectionProgress - activeTopOffsetLowIndex;
+  const activeTopOffset =
+    cumulativeTop[activeTopOffsetLowIndex] +
+    (cumulativeTop[activeTopOffsetHighIndex] - cumulativeTop[activeTopOffsetLowIndex]) *
+      activeTopOffsetFrac;
 
   return (
     <div className="bg-[#15181D]">
@@ -2762,20 +2809,20 @@ function App() {
         </div>
       </div>
 
-      {/* the actual case-study text — all four blocks stacked underneath
+      {/* the actual case-study text — all five blocks stacked underneath
           each other, same x-axis as before (left/width: 50%, unchanged —
           only the y-position moves). Each block's own `top` is
-          calc(50% - 280px + (i - activeSection) * TEXT_ITEM_GAP), so the
-          active one (i === activeSection) always lands exactly on the
-          animation canvas's own top edge (calc(50% - CANVAS_HEIGHT/2),
-          matching how the canvas is centered via flex items-center in
-          its h-screen column) rather than a fixed pixel value — so it
-          stays aligned with the top of the animation at any viewport
-          height. Earlier sections sit above that, later ones sit below.
-          TEXT_ITEM_GAP is comfortably taller than the longest paragraph
-          so the fully-visible active block never overlaps its dimmed
-          neighbors. Sections above the active one fade to 0; sections
-          below stay dimmed at 30%. */}
+          calc(50% - 280px + (cumulativeTop[i] - activeTopOffset)), so the
+          active one always lands exactly on the animation canvas's own
+          top edge (calc(50% - CANVAS_HEIGHT/2), matching how the canvas
+          is centered via flex items-center in its h-screen column)
+          rather than a fixed pixel value — so it stays aligned with the
+          top of the animation at any viewport height. Earlier sections
+          sit above that, later ones sit below, spaced by each block's own
+          measured height plus the constant TEXT_GAP — so the visual gap
+          between blocks is the same everywhere even though the blocks
+          themselves wrap to different heights. Sections above the active
+          one fade to 0; sections below stay dimmed at 30%. */}
       <div
         className="fixed top-0 h-screen pointer-events-none"
         style={{ left: '50%', width: '50%', zIndex: 15 }}
@@ -2784,9 +2831,12 @@ function App() {
           {sectionCopy.map((text, i) => (
             <p
               key={i}
+              ref={(el) => {
+                textRefs.current[i] = el;
+              }}
               className="absolute left-0 text-white text-lg max-w-md px-12"
               style={{
-                top: `calc(50% - ${CANVAS_HEIGHT / 2}px + ${(i - sectionProgress) * TEXT_ITEM_GAP}px)`,
+                top: `calc(50% - ${CANVAS_HEIGHT / 2}px + ${cumulativeTop[i] - activeTopOffset}px)`,
                 opacity: i < activeSection ? 0 : i === activeSection ? 1 : 0.3,
                 transition: 'opacity 1.5s ease',
               }}
