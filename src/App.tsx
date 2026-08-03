@@ -852,7 +852,6 @@ const sectionCopy = [
   `As a third-party tool, EasySBC lives or dies on recognizability — a player needs to glance at a stat on the site and instantly know which in-game attribute it maps to. EA also reshuffles its own color coding almost every FC edition, so a handful of colors were deliberately built into the palette as known temporary placeholders — flagged from day one as due for revision, rather than treated as permanent parts of the system.`,
   `Every component was checked against the same bar: color contrast, colorblindness, sizing, and SEO compliance. Those checks became a living set of guidelines — exactly where and how each color and element was allowed to be used, so the system stayed consistent as it grew.`,
   `Wireframes were part of the process from day one of the MVP — sketching out structure and flow before any color or polish entered the picture, so the underlying logic held up on its own.`,
-  `From there, those wireframes became the real thing. Here's a look at the finished product — from the home dashboard through squad building, evolutions, and match tactics — each screen built on the same consistent system laid out above.`,
 ];
 
 function App() {
