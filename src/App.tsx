@@ -2843,7 +2843,15 @@ function App() {
               style={{
                 top: `calc(50% - ${CANVAS_HEIGHT / 2}px + ${cumulativeTop[i] - activeTopOffset}px)`,
                 opacity: i < activeSection ? 0 : i === activeSection ? 1 : 0.3,
-                transition: 'opacity 1.5s ease',
+                // the very last block has nothing after it to hand off
+                // to — once it fades, the screenshot mosaic is already
+                // appearing right where it sits, so it gets a much
+                // quicker fade-out than the rest to clear out of the way
+                // before it visually collides with the animation.
+                transition:
+                  i === sectionCopy.length - 1 && i < activeSection
+                    ? 'opacity 0.3s ease'
+                    : 'opacity 1.5s ease',
               }}
             >
               {text}
