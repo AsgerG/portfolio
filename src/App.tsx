@@ -5,6 +5,7 @@ import sbcSetPage from './assets/sbc_set_page.png';
 import solutionView from './assets/solution_view.png';
 import myClub from './assets/my_club.png';
 import players from './assets/players.png';
+import detailedPlayerView from './assets/detailed_player_view.png';
 
 // drives smooth/eased scrolling site-wide. Lenis animates the native scroll
 // position itself (window.scrollTo under the hood), so it still dispatches
@@ -964,28 +965,34 @@ function App() {
   // converging on my_club's position (convergeT) -> my_club fades in
   // where they meet (myClubRevealT) -> a connector line grows down from
   // my_club (playersLineT) -> players fades in underneath it
-  // (playersRevealT). The camera pan (cameraOffset, below) is NOT one of
-  // these discrete stages — it's a separate, continuous ramp that starts
-  // the moment row 2 begins (VLINE_END) and runs slowly all the way
-  // through to PLAYERS_LINE_END, overlapping every stage in between.
+  // (playersRevealT) -> a horizontal connector line grows right from
+  // players (detailLineT) -> detailed_player_view fades in beside it
+  // (detailedPlayerViewRevealT). The camera pan (cameraOffset, below) is
+  // NOT one of these discrete stages — it's a separate, continuous ramp
+  // that starts the moment row 2 begins (VLINE_END) and runs slowly all
+  // the way through to PLAYERS_LINE_END, overlapping every stage in
+  // between (detailed_player_view is in the same row as players, so it
+  // doesn't need any further panning).
   const outroT = clamp01((progress - TIMELINE_SCALE) / (1 - TIMELINE_SCALE));
-  const BASE_SVG_END = 0.13; // outroT 0      -> 0.13: base SVG
-  const DETAIL_SVG_END = 0.24; // outroT 0.13  -> 0.24: detail SVG
-  const HOME_PAGE_END = 0.34; // outroT 0.24   -> 0.34: home-page image
-  const LINE_END = 0.39; // outroT 0.34        -> 0.39: horizontal connector line
-  const SET_PAGE_END = 0.49; // outroT 0.39    -> 0.49: set-page image
-  const VLINE_END = 0.54; // outroT 0.49       -> 0.54: vertical connector line
+  const BASE_SVG_END = 0.12; // outroT 0      -> 0.12: base SVG
+  const DETAIL_SVG_END = 0.21; // outroT 0.12  -> 0.21: detail SVG
+  const HOME_PAGE_END = 0.3; // outroT 0.21    -> 0.3:  home-page image
+  const LINE_END = 0.34; // outroT 0.3         -> 0.34: horizontal connector line
+  const SET_PAGE_END = 0.43; // outroT 0.34    -> 0.43: set-page image
+  const VLINE_END = 0.47; // outroT 0.43       -> 0.47: vertical connector line
   // (also where the continuous camera pan begins — see cameraOffset below)
-  const SOLUTION_VIEW_END = 0.64; // outroT 0.54 -> 0.64: solution-view image
-  const CONVERGE_LINES_END = 0.71; // outroT 0.64 -> 0.71: the two lines to my_club
-  const MY_CLUB_END = 0.78; // outroT 0.71     -> 0.78: my_club image
-  const PLAYERS_LINE_END = 0.9; // outroT 0.78 -> 0.9: connector line down from my_club
+  const SOLUTION_VIEW_END = 0.56; // outroT 0.47 -> 0.56: solution-view image
+  const CONVERGE_LINES_END = 0.62; // outroT 0.56 -> 0.62: the two lines to my_club
+  const MY_CLUB_END = 0.69; // outroT 0.62     -> 0.69: my_club image
+  const PLAYERS_LINE_END = 0.79; // outroT 0.69 -> 0.79: connector line down from my_club
   // (also where the continuous camera pan finishes)
-  // outroT 0.9 -> 1: players image
+  const PLAYERS_END = 0.88; // outroT 0.79     -> 0.88: players image
+  const DETAIL_LINE_END = 0.93; // outroT 0.88 -> 0.93: connector line right from players
+  // outroT 0.93 -> 1: detailed_player_view image
   const IMAGE_GAP = 50; // px gap between images, reused for every gap
   const IMAGE_HEIGHT = 308.25; // rendered height of the 450px-wide 1200x822
-  // screenshots (sbc_set_page, solution_view, my_club, players) at that
-  // aspect ratio
+  // screenshots (sbc_set_page, solution_view, my_club, players,
+  // detailed_player_view) at that aspect ratio
   const ROW_HEIGHT = IMAGE_HEIGHT + IMAGE_GAP; // vertical spacing between rows
   const baseT = clamp01(outroT / BASE_SVG_END);
   const REVEAL_Y_START = 600; // illustration's own y position: travels from
@@ -1001,7 +1008,9 @@ function App() {
   const convergeT = clamp01((outroT - SOLUTION_VIEW_END) / (CONVERGE_LINES_END - SOLUTION_VIEW_END));
   const myClubRevealT = clamp01((outroT - CONVERGE_LINES_END) / (MY_CLUB_END - CONVERGE_LINES_END));
   const playersLineT = clamp01((outroT - MY_CLUB_END) / (PLAYERS_LINE_END - MY_CLUB_END));
-  const playersRevealT = clamp01((outroT - PLAYERS_LINE_END) / (1 - PLAYERS_LINE_END));
+  const playersRevealT = clamp01((outroT - PLAYERS_LINE_END) / (PLAYERS_END - PLAYERS_LINE_END));
+  const detailLineT = clamp01((outroT - PLAYERS_END) / (DETAIL_LINE_END - PLAYERS_END));
+  const detailedPlayerViewRevealT = clamp01((outroT - DETAIL_LINE_END) / (1 - DETAIL_LINE_END));
   // continuous camera pan: starts the instant row 2 is introduced
   // (VLINE_END) and creeps up by one row (ROW_HEIGHT) slowly across
   // everything from there through to PLAYERS_LINE_END — not a separate
@@ -2266,6 +2275,40 @@ function App() {
                   height: 'auto',
                   zIndex: 2,
                   opacity: playersRevealT,
+                }}
+              />
+
+              {/* connector line right from players to detailed_player_view,
+                  same row (top: ROW_HEIGHT*2 + IMAGE_HEIGHT/2, vertical
+                  center of row 3), growing left-to-right like the very
+                  first connector line */}
+              <div
+                style={{
+                  position: 'absolute',
+                  top: ROW_HEIGHT * 2 + IMAGE_HEIGHT / 2,
+                  left: 450,
+                  width: lerp(0, IMAGE_GAP, detailLineT),
+                  height: 2,
+                  backgroundColor: 'rgba(255, 255, 255, 0.6)',
+                  zIndex: 2,
+                }}
+              />
+
+              {/* detailed_player_view screenshot — same 450px width, same
+                  row as players, 50px gap to its right. Waits until the
+                  connector line above has fully grown before fading in. */}
+              <img
+                src={detailedPlayerView}
+                alt=""
+                width={450}
+                style={{
+                  position: 'absolute',
+                  top: ROW_HEIGHT * 2,
+                  left: 450 + IMAGE_GAP,
+                  width: 450,
+                  height: 'auto',
+                  zIndex: 2,
+                  opacity: detailedPlayerViewRevealT,
                 }}
               />
               </div>
