@@ -143,7 +143,7 @@ function estimateTextWidth(text: string, fontSize: number) {
 // a sizing reference. It's absolutely positioned and pointer-events-none,
 // so it never affects layout or interaction, and isn't part of the
 // animation itself — nothing here reads scroll progress.
-const SHOW_DEBUG_GRID = true;
+const SHOW_DEBUG_GRID = false;
 const GRID_COLOR = '#9FD7F3';
 function DebugGrid({ width, height, step = 100 }: { width: number; height: number; step?: number }) {
   const xLines: number[] = [];
