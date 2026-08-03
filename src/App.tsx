@@ -1138,6 +1138,23 @@ function App() {
           ? 'Part 3: UI components'
           : 'Part 4: Wireframes & overview';
 
+  // same four boundaries as sectionName above, as numeric [start, end]
+  // pairs so each section's text can compute its own local roll-in
+  // progress. Each block only takes the first ROLL_IN_FRACTION of its own
+  // section to fully roll in — then it just sits still (pinned via
+  // sticky) for the rest of that section, instead of animating in slowly
+  // across the whole thing.
+  const SECTION_RANGES: [number, number][] = [
+    [0, 0.5 * TIMELINE_SCALE],
+    [0.5 * TIMELINE_SCALE, 0.85 * TIMELINE_SCALE],
+    [0.85 * TIMELINE_SCALE, TIMELINE_SCALE],
+    [TIMELINE_SCALE, 1],
+  ];
+  const ROLL_IN_FRACTION = 0.15;
+  const sectionRollT = SECTION_RANGES.map(([start, end]) =>
+    clamp01((progress - start) / ((end - start) * ROLL_IN_FRACTION)),
+  );
+
   return (
     <div className="bg-[#15181D]">
       {/* live scroll-progress readout, fixed to the viewport, for lining
@@ -2642,22 +2659,73 @@ function App() {
           </div>
         </div>
 
-        {/* case-study copy, one block per section, spaced so each block's
-            position roughly lines up with when its section is active
-            (section boundaries: 0.475, 0.8075, 0.95 of total progress —
-            see sectionName above). These are estimates based on the
-            timeline's stage boundaries, not pixel-measured against a live
-            preview, so the exact spacing may need a follow-up pass once
-            it can be checked in the browser. */}
-        <div className="flex flex-col px-12 text-white/70 text-lg max-w-md">
-          <div style={{ height: '120vh' }} aria-hidden />
-          <p>{sectionCopy[0]}</p>
-          <div style={{ height: '200vh' }} aria-hidden />
-          <p>{sectionCopy[1]}</p>
-          <div style={{ height: '115vh' }} aria-hidden />
-          <p>{sectionCopy[2]}</p>
-          <div style={{ height: '50vh' }} aria-hidden />
-          <p>{sectionCopy[3]}</p>
+        {/* case-study copy, one block per section. Each block lives in its
+            own container sized proportionally to that section's share of
+            the scroll (230vh / 161vh / 69vh / 25vh — matching the
+            0.475 / 0.3325 / 0.1425 / 0.05 fractions of total progress from
+            SECTION_RANGES above, scaled to roughly the same total budget
+            the old spacer-based layout used), with a sticky child that
+            pins it to the top of the viewport for that whole span — same
+            pinning mechanism as the animation canvas beside it. The text
+            itself rolls in (fades + slides up) over just the first 15% of
+            its own section via sectionRollT, then holds still, fully
+            visible, for the rest — instead of never animating at all.
+            Note: section 4's container (25vh) is shorter than the
+            sticky child's own h-screen height, so it barely gets any pin
+            time before handing off to the trailing buffer — expected,
+            since that section is only 5% of the whole scroll. These
+            heights are estimates from the stage boundaries, not
+            pixel-measured against a live preview, so they may need a
+            follow-up pass once this can be checked in the browser. */}
+        <div className="flex flex-col text-white/70 text-lg max-w-md">
+          <div style={{ height: '230vh' }}>
+            <div className="sticky top-0 h-screen flex items-center px-12">
+              <p
+                style={{
+                  opacity: sectionRollT[0],
+                  transform: `translateY(${lerp(24, 0, sectionRollT[0])}px)`,
+                }}
+              >
+                {sectionCopy[0]}
+              </p>
+            </div>
+          </div>
+          <div style={{ height: '161vh' }}>
+            <div className="sticky top-0 h-screen flex items-center px-12">
+              <p
+                style={{
+                  opacity: sectionRollT[1],
+                  transform: `translateY(${lerp(24, 0, sectionRollT[1])}px)`,
+                }}
+              >
+                {sectionCopy[1]}
+              </p>
+            </div>
+          </div>
+          <div style={{ height: '69vh' }}>
+            <div className="sticky top-0 h-screen flex items-center px-12">
+              <p
+                style={{
+                  opacity: sectionRollT[2],
+                  transform: `translateY(${lerp(24, 0, sectionRollT[2])}px)`,
+                }}
+              >
+                {sectionCopy[2]}
+              </p>
+            </div>
+          </div>
+          <div style={{ height: '25vh' }}>
+            <div className="sticky top-0 h-screen flex items-center px-12">
+              <p
+                style={{
+                  opacity: sectionRollT[3],
+                  transform: `translateY(${lerp(24, 0, sectionRollT[3])}px)`,
+                }}
+              >
+                {sectionCopy[3]}
+              </p>
+            </div>
+          </div>
           {/* trailing buffer: without this, the sticky canvas unsticks and
               starts scrolling away the instant progress hits 1 (there's no
               container height left to keep it pinned), cutting the outro
