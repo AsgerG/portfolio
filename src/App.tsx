@@ -1204,6 +1204,33 @@ function App() {
   // never visually collides with its dimmed neighbors above/below.
   const TEXT_ITEM_GAP = 440;
 
+  // continuous 0..4 position driving the text stack below — derived
+  // directly from scroll progress (not a fixed-duration CSS transition),
+  // so the roll-in speed always tracks how fast the reader scrolls, and
+  // the text lands on its new slot at the exact moment that section's
+  // own animation stage pauses (SEC*_END), not sooner and not later.
+  // That way the reader watches the animation while it's actively
+  // drawing, and the text finishes arriving right as it stops — cueing
+  // the shift from watching to reading. The very first section has
+  // nothing to roll in from, so it just sits at its slot the whole time.
+  const sectionActiveEnd =
+    activeSection === 0
+      ? SEC1_END
+      : activeSection === 1
+        ? SEC2_END
+        : activeSection === 2
+          ? SEC3_END
+          : activeSection === 3
+            ? SEC4_END
+            : 1;
+  const sectionActiveStart = activeSection * SECTION_LEN;
+  const sectionProgress =
+    activeSection === 0
+      ? 0
+      : activeSection -
+        1 +
+        clamp01((progress - sectionActiveStart) / (sectionActiveEnd - sectionActiveStart));
+
   return (
     <div className="bg-[#15181D]">
       {/* live scroll-progress readout, fixed to the viewport, for lining
@@ -2759,9 +2786,9 @@ function App() {
               key={i}
               className="absolute left-0 text-white text-lg max-w-md px-12"
               style={{
-                top: `calc(50% - ${CANVAS_HEIGHT / 2}px + ${(i - activeSection) * TEXT_ITEM_GAP}px)`,
+                top: `calc(50% - ${CANVAS_HEIGHT / 2}px + ${(i - sectionProgress) * TEXT_ITEM_GAP}px)`,
                 opacity: i < activeSection ? 0 : i === activeSection ? 1 : 0.3,
-                transition: 'top 1s ease, opacity 1s ease',
+                transition: 'opacity 0.4s ease',
               }}
             >
               {text}
