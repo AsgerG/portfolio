@@ -933,12 +933,18 @@ function App() {
   // "Analogous" fades in as the teal row and purple circle spawn
   const analogousLabelLocal = clamp01(stageRows / 0.5);
 
-  // green and red spawn in together — the last stage of section 1, so
-  // its end is pinned exactly to SEC1_END (not an independently-rounded
-  // width) to guarantee the pause before section 2 is exactly
-  // SECTION_BREAK long
+  // green and red spawn in together — the last stage of section 1. Its
+  // downstream effects (greenLocal/redLocal/signalLabelLocal below) only
+  // use the first 60% of stageSignal's own 0-1 range (they divide it by
+  // 0.6), so pinning stageSignal's own end to SEC1_END isn't enough — the
+  // content would actually finish at 60% of the way there, leaving an
+  // extra, uneven gap on top of SECTION_BREAK. Dividing the width by 0.6
+  // stretches stageSignal so that its 0.6 mark — where the visible
+  // content actually settles — lands exactly on SEC1_END instead.
   const stageSignalStart = 0.234 * TIMELINE_SCALE;
-  const stageSignal = clamp01((progress - stageSignalStart) / (SEC1_END - stageSignalStart));
+  const stageSignal = clamp01(
+    (progress - stageSignalStart) / ((SEC1_END - stageSignalStart) / 0.6),
+  );
   const greenLocal = clamp01(stageSignal / 0.6);
   const redLocal = clamp01(stageSignal / 0.6);
 
