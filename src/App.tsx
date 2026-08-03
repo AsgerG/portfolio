@@ -7,6 +7,7 @@ import myClub from './assets/my_club.png';
 import players from './assets/players.png';
 import detailedPlayerView from './assets/detailed_player_view.png';
 import evolutions from './assets/evolutions.png';
+import evolutionBuilder from './assets/evolution_builder.png';
 
 // drives smooth/eased scrolling site-wide. Lenis animates the native scroll
 // position itself (window.scrollTo under the hood), so it still dispatches
@@ -970,36 +971,42 @@ function App() {
   // players (detailLineT) -> detailed_player_view fades in beside it
   // (detailedPlayerViewRevealT) -> a connector line grows down from
   // players (evolutionsLineT) -> evolutions fades in underneath it
-  // (evolutionsRevealT). The vertical camera pan (cameraOffsetY, below) is
-  // NOT one of these discrete stages — it's a separate, continuous ramp
-  // that starts as soon as the next row is introduced and finishes just
-  // before that row's own reveal, so each row ends up roughly centered
-  // (in y) in the canvas as it spawns. No horizontal panning — each
-  // column is already about canvas-width, so both columns read as
-  // centered without any help. (Pacing across all these stages will get a
-  // proper pass later — this is just wiring up the next image for now.)
+  // (evolutionsRevealT) -> two more connector lines grow at once — one
+  // right from evolutions, one down from detailed_player_view — both
+  // converging on evolution_builder's position (builderLinesT) ->
+  // evolution_builder fades in where they meet (evolutionBuilderRevealT).
+  // The vertical camera pan (cameraOffsetY, below) is NOT one of these
+  // discrete stages — it's a separate, continuous ramp that starts as
+  // soon as the next row is introduced and finishes just before that
+  // row's own reveal, so each row ends up roughly centered (in y) in the
+  // canvas as it spawns. No horizontal panning — each column is already
+  // about canvas-width, so both columns read as centered without any
+  // help. (Pacing across all these stages will get a proper pass later —
+  // this is just wiring up the next image for now.)
   const outroT = clamp01((progress - TIMELINE_SCALE) / (1 - TIMELINE_SCALE));
-  const BASE_SVG_END = 0.11; // outroT 0      -> 0.11: base SVG
-  const DETAIL_SVG_END = 0.19; // outroT 0.11  -> 0.19: detail SVG
-  const HOME_PAGE_END = 0.28; // outroT 0.19   -> 0.28: home-page image
-  const LINE_END = 0.31; // outroT 0.28        -> 0.31: horizontal connector line
-  const SET_PAGE_END = 0.4; // outroT 0.31     -> 0.4:  set-page image
-  const VLINE_END = 0.43; // outroT 0.4        -> 0.43: vertical connector line
+  const BASE_SVG_END = 0.099; // outroT 0       -> 0.099: base SVG
+  const DETAIL_SVG_END = 0.171; // outroT 0.099  -> 0.171: detail SVG
+  const HOME_PAGE_END = 0.252; // outroT 0.171   -> 0.252: home-page image
+  const LINE_END = 0.279; // outroT 0.252        -> 0.279: horizontal connector line
+  const SET_PAGE_END = 0.36; // outroT 0.279     -> 0.36:  set-page image
+  const VLINE_END = 0.387; // outroT 0.36        -> 0.387: vertical connector line
   // (also where the continuous vertical camera pan begins — see cameraOffsetY below)
-  const SOLUTION_VIEW_END = 0.51; // outroT 0.43 -> 0.51: solution-view image
-  const CONVERGE_LINES_END = 0.57; // outroT 0.51 -> 0.57: the two lines to my_club
-  const MY_CLUB_END = 0.63; // outroT 0.57     -> 0.63: my_club image
-  const PLAYERS_LINE_END = 0.71; // outroT 0.63 -> 0.71: connector line down from my_club
-  const PLAYERS_END = 0.79; // outroT 0.71     -> 0.79: players image
-  const DETAIL_LINE_END = 0.83; // outroT 0.79 -> 0.83: connector line right from players
-  const DETAILED_PLAYER_VIEW_END = 0.92; // outroT 0.83 -> 0.92: detailed_player_view image
-  const EVOLUTIONS_LINE_END = 0.96; // outroT 0.92 -> 0.96: connector line down from players
+  const SOLUTION_VIEW_END = 0.459; // outroT 0.387 -> 0.459: solution-view image
+  const CONVERGE_LINES_END = 0.513; // outroT 0.459 -> 0.513: the two lines to my_club
+  const MY_CLUB_END = 0.567; // outroT 0.513     -> 0.567: my_club image
+  const PLAYERS_LINE_END = 0.639; // outroT 0.567 -> 0.639: connector line down from my_club
+  const PLAYERS_END = 0.711; // outroT 0.639     -> 0.711: players image
+  const DETAIL_LINE_END = 0.747; // outroT 0.711 -> 0.747: connector line right from players
+  const DETAILED_PLAYER_VIEW_END = 0.828; // outroT 0.747 -> 0.828: detailed_player_view image
+  const EVOLUTIONS_LINE_END = 0.864; // outroT 0.828 -> 0.864: connector line down from players
   // (also where the continuous camera pan finishes)
-  // outroT 0.96 -> 1: evolutions image
+  const EVOLUTIONS_END = 0.93; // outroT 0.864 -> 0.93: evolutions image
+  const BUILDER_LINES_END = 0.97; // outroT 0.93 -> 0.97: the two lines to evolution_builder
+  // outroT 0.97 -> 1: evolution_builder image
   const IMAGE_GAP = 50; // px gap between images, reused for every gap
   const IMAGE_HEIGHT = 308.25; // rendered height of the 450px-wide 1200x822
   // screenshots (sbc_set_page, solution_view, my_club, players,
-  // detailed_player_view, evolutions) at that aspect ratio
+  // detailed_player_view, evolutions, evolution_builder) at that aspect ratio
   const ROW_HEIGHT = IMAGE_HEIGHT + IMAGE_GAP; // vertical spacing between rows
   const baseT = clamp01(outroT / BASE_SVG_END);
   const REVEAL_Y_START = 600; // illustration's own y position: travels from
@@ -1023,7 +1030,11 @@ function App() {
   const evolutionsLineT = clamp01(
     (outroT - DETAILED_PLAYER_VIEW_END) / (EVOLUTIONS_LINE_END - DETAILED_PLAYER_VIEW_END),
   );
-  const evolutionsRevealT = clamp01((outroT - EVOLUTIONS_LINE_END) / (1 - EVOLUTIONS_LINE_END));
+  const evolutionsRevealT = clamp01(
+    (outroT - EVOLUTIONS_LINE_END) / (EVOLUTIONS_END - EVOLUTIONS_LINE_END),
+  );
+  const builderLinesT = clamp01((outroT - EVOLUTIONS_END) / (BUILDER_LINES_END - EVOLUTIONS_END));
+  const evolutionBuilderRevealT = clamp01((outroT - BUILDER_LINES_END) / (1 - BUILDER_LINES_END));
   // continuous vertical-only camera pan: no horizontal panning — each row
   // is 450px wide same as the canvas, so column 1 and column 2 are both
   // already roughly centered horizontally without any help. Vertically,
@@ -2367,6 +2378,52 @@ function App() {
                   height: 'auto',
                   zIndex: 2,
                   opacity: evolutionsRevealT,
+                }}
+              />
+
+              {/* two connector lines growing at once, converging on
+                  evolution_builder's position (row 4, column 2): one
+                  right from evolutions, one down from
+                  detailed_player_view */}
+              <div
+                style={{
+                  position: 'absolute',
+                  top: ROW_HEIGHT * 3 + IMAGE_HEIGHT / 2,
+                  left: 450, // evolutions' right edge
+                  width: lerp(0, IMAGE_GAP, builderLinesT),
+                  height: 2,
+                  backgroundColor: 'rgba(255, 255, 255, 0.6)',
+                  zIndex: 2,
+                }}
+              />
+              <div
+                style={{
+                  position: 'absolute',
+                  top: ROW_HEIGHT * 2 + IMAGE_HEIGHT, // detailed_player_view's bottom edge
+                  left: 725, // center of column 2 (500 + 225)
+                  width: 2,
+                  height: lerp(0, IMAGE_GAP, builderLinesT),
+                  backgroundColor: 'rgba(255, 255, 255, 0.6)',
+                  zIndex: 2,
+                }}
+              />
+
+              {/* evolution_builder screenshot — row 4, column 2, same
+                  left edge as sbc_set_page/solution_view/
+                  detailed_player_view. Waits until both lines above have
+                  fully grown before it starts fading in. */}
+              <img
+                src={evolutionBuilder}
+                alt=""
+                width={450}
+                style={{
+                  position: 'absolute',
+                  top: ROW_HEIGHT * 3,
+                  left: 500,
+                  width: 450,
+                  height: 'auto',
+                  zIndex: 2,
+                  opacity: evolutionBuilderRevealT,
                 }}
               />
               </div>
