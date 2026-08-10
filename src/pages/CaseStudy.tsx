@@ -12,6 +12,7 @@ import tactics from '../assets/easysbc/designExamples/tactics.png';
 import squadBuilder from '../assets/easysbc/designExamples/squad_builder.png';
 import metaRatingExplainer from '../assets/easysbc/designExamples/meta_rating_explainer.png';
 import squadTactics from '../assets/easysbc/designExamples/squad_tactics.png';
+import easysbcLogo from '../assets/easysbc/easysbc_logo.png';
 
 // drives smooth/eased scrolling site-wide. Lenis animates the native scroll
 // position itself (window.scrollTo under the hood), so it still dispatches
@@ -1234,13 +1235,6 @@ function CaseStudy() {
 
   return (
     <div className="bg-[#15181D]">
-      {/* back to the homepage this case study is reached from */}
-      <a
-        href="#"
-        className="fixed top-4 right-4 z-50 text-xs text-white/70 hover:text-white bg-black/50 px-3 py-1.5 rounded"
-      >
-        ← Back
-      </a>
       {/* live scroll-progress readout, fixed to the viewport, for lining
           up which stage of the timeline we're talking about while polishing */}
       <div className="fixed top-4 left-4 z-50 flex items-center gap-2 font-mono text-xs text-white/70 pointer-events-none">
@@ -2758,17 +2752,42 @@ function CaseStudy() {
           <div style={{ height: '60vh' }} aria-hidden />
           <div
             ref={textBoxRef}
-            className="rounded-xl p-6"
+            className="relative rounded-xl p-8"
             style={{
               backgroundColor: '#1E2126',
               border: '1px solid rgba(255,255,255,0.04)',
               boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08)',
             }}
           >
-            <div className="space-y-4 text-white text-lg">
-              {sectionCopy.map((text, i) => (
-                <p key={i}>{text}</p>
-              ))}
+            {/* back to the homepage this case study is reached from —
+                same top-left placement as the Fruit Sorting page's box */}
+            <a
+              href="#"
+              className="absolute top-6 left-6 z-10 text-xs text-white/50 hover:text-white/80 transition-colors"
+            >
+              ← Back
+            </a>
+
+            {/* mirrors the DTU/Humble/LEGO logo row on the Fruit Sorting
+                page's box, top-right */}
+            <img
+              src={easysbcLogo}
+              alt="EasySBC"
+              className="absolute top-6 right-6 w-10 h-10 rounded-full"
+            />
+
+            <div className="pt-10">
+              <h2 className="text-xl font-semibold mb-1">
+                EasySBC — Color System &amp; Product Design
+              </h2>
+              <p className="text-sm text-white/50 mb-6">
+                Color system, UI components, and product structure for a FIFA squad-building tool
+              </p>
+              <div className="space-y-4 text-white/80 text-lg leading-relaxed">
+                {sectionCopy.map((text, i) => (
+                  <p key={i}>{text}</p>
+                ))}
+              </div>
             </div>
           </div>
           <div style={{ height: '424vh' }} aria-hidden />
