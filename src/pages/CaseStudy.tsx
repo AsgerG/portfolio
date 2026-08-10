@@ -862,12 +862,16 @@ function CaseStudy() {
   // the text box is now part of the animation itself rather than normal
   // scrolling page content: pinned to the viewport (like the canvas) and
   // driven entirely by `progress`, drifting slowly upward from
-  // TEXTBOX_START_TOP_PCT at progress 0 to TEXTBOX_END_TOP_PCT by
-  // TEXTBOX_MOVE_END (0.8) — clamp01 holds it at that final position for
-  // the rest of the scroll instead of overshooting past it.
+  // TEXTBOX_START_TOP_PCT (+ the extra TEXTBOX_START_EXTRA_PX push down)
+  // at progress 0, to TEXTBOX_END_TOP_PCT by TEXTBOX_MOVE_END (0.8) —
+  // clamp01 holds it at that final position for the rest of the scroll
+  // instead of overshooting past it. -100% puts the box's center a full
+  // viewport height above the top of the screen, comfortably off-screen
+  // by 0.8 regardless of the box's own height or the extra px push.
   const TEXTBOX_MOVE_END = 0.8;
   const TEXTBOX_START_TOP_PCT = 70;
-  const TEXTBOX_END_TOP_PCT = 20;
+  const TEXTBOX_END_TOP_PCT = -100;
+  const TEXTBOX_START_EXTRA_PX = 300;
   const textboxTopPct = lerp(
     TEXTBOX_START_TOP_PCT,
     TEXTBOX_END_TOP_PCT,
@@ -2719,7 +2723,7 @@ function CaseStudy() {
         <div
           className="absolute pointer-events-auto rounded-xl p-6 max-w-md"
           style={{
-            top: `${textboxTopPct}%`,
+            top: `calc(${textboxTopPct}% + ${TEXTBOX_START_EXTRA_PX}px)`,
             transform: 'translateY(-50%)',
             marginLeft: -200,
             backgroundColor: '#1E2126',
