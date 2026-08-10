@@ -23,6 +23,32 @@ function Home() {
             View case study →
           </p>
         </a>
+
+        <a
+          href="#playground"
+          className="group block rounded-xl border border-white/10 hover:border-white/30 bg-white/5 hover:bg-white/10 transition-colors px-6 py-5 mt-4"
+        >
+          <p className="text-lg font-medium mb-1">Entrepreneur & Software</p>
+          <p className="text-sm text-white/60">
+            Work in progress.
+          </p>
+          <p className="text-sm text-white/40 mt-3 group-hover:text-white/70 transition-colors">
+            Explore →
+          </p>
+        </a>
+
+        <a
+          href="#fruit-sorting"
+          className="group block rounded-xl border border-white/10 hover:border-white/30 bg-white/5 hover:bg-white/10 transition-colors px-6 py-5 mt-4"
+        >
+          <p className="text-lg font-medium mb-1">Fruit Sorting — Humble</p>
+          <p className="text-sm text-white/60">
+            Work in progress.
+          </p>
+          <p className="text-sm text-white/40 mt-3 group-hover:text-white/70 transition-colors">
+            Explore →
+          </p>
+        </a>
       </div>
     </div>
   );

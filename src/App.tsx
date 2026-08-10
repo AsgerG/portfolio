@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import Home from './pages/Home';
 import CaseStudy from './pages/CaseStudy';
+import Playground from './pages/Playground';
+import FruitSorting from './pages/FruitSorting';
 
 // tiny hash-based router — no dependency needed for two pages, and hash
 // routes work on any static host without server-side rewrite config
@@ -23,6 +25,8 @@ function App() {
   }, []);
 
   if (route === 'easysbc') return <CaseStudy />;
+  if (route === 'playground') return <Playground />;
+  if (route === 'fruit-sorting') return <FruitSorting />;
   return <Home />;
 }
 

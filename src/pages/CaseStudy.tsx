@@ -2834,22 +2834,29 @@ function CaseStudy() {
           measured height plus the constant TEXT_GAP — so the visual gap
           between blocks is the same everywhere even though the blocks
           themselves wrap to different heights. Sections above the active
-          one fade to 0; sections below stay dimmed at 30%. */}
+          one fade to 0; sections below stay dimmed at 30%. Each block sits
+          in a card (same dark panel treatment as the Fruit Sorting page's
+          text box — #1E2126, subtle border, inset top highlight) instead
+          of floating directly over the animation, so it stays legible
+          regardless of what's happening behind it. */}
       <div
         className="fixed top-0 h-screen pointer-events-none"
         style={{ left: '50%', width: '50%', zIndex: 15 }}
       >
         <div className="relative h-full">
           {sectionCopy.map((text, i) => (
-            <p
+            <div
               key={i}
               ref={(el) => {
                 textRefs.current[i] = el;
               }}
-              className="absolute left-0 text-white text-lg max-w-md px-12"
+              className="absolute left-6 max-w-md rounded-xl p-6"
               style={{
                 top: `calc(50% - ${CANVAS_HEIGHT / 2}px + ${cumulativeTop[i] - activeTopOffset}px)`,
                 opacity: i < activeSection ? 0 : i === activeSection ? 1 : 0.3,
+                backgroundColor: '#1E2126',
+                border: '1px solid rgba(255,255,255,0.04)',
+                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08)',
                 // the very last block has nothing after it to hand off
                 // to — once it fades, the screenshot mosaic is already
                 // appearing right where it sits, so it gets a much
@@ -2861,8 +2868,8 @@ function CaseStudy() {
                     : 'opacity 1.5s ease',
               }}
             >
-              {text}
-            </p>
+              <p className="text-white text-lg">{text}</p>
+            </div>
           ))}
         </div>
       </div>

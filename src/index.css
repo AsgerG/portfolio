@@ -4,6 +4,18 @@
   color-scheme: dark;
 }
 
+html {
+  /* prevents horizontal scroll at the document level. Doing this on a
+     nested div instead (as FruitSorting.tsx used to) makes that div its
+     own scroll container — the CSS rule that a non-'visible' overflow-x
+     forces the paired overflow-y to 'auto' kicks in — which creates a
+     second, separate scrollable region rather than one universal scroll.
+     Only set on html, not also on body: html is the actual root scrolling
+     element, and setting it on both split the scroll between two nested
+     boxes instead of one. */
+  overflow-x: hidden;
+}
+
 body {
   margin: 0;
   background: #15181d;
