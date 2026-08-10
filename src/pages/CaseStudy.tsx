@@ -2757,6 +2757,7 @@ function CaseStudy() {
               backgroundColor: '#1E2126',
               border: '1px solid rgba(255,255,255,0.04)',
               boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08)',
+              marginLeft: -200,
             }}
           >
             {/* back to the homepage this case study is reached from —
