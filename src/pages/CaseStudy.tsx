@@ -1,17 +1,17 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
 import Lenis from 'lenis';
-import sbcHomePage from '../assets/sbc_home_page.png';
-import sbcSetPage from '../assets/sbc_set_page.png';
-import solutionView from '../assets/solution_view.png';
-import myClub from '../assets/my_club.png';
-import players from '../assets/players.png';
-import detailedPlayerView from '../assets/detailed_player_view.png';
-import evolutions from '../assets/evolutions.png';
-import evolutionBuilder from '../assets/evolution_builder.png';
-import tactics from '../assets/tactics.png';
-import squadBuilder from '../assets/squad_builder.png';
-import metaRatingExplainer from '../assets/meta_rating_explainer.png';
-import squadTactics from '../assets/squad_tactics.png';
+import sbcHomePage from '../assets/easysbc/designExamples/sbc_home_page.png';
+import sbcSetPage from '../assets/easysbc/designExamples/sbc_set_page.png';
+import solutionView from '../assets/easysbc/designExamples/solution_view.png';
+import myClub from '../assets/easysbc/designExamples/my_club.png';
+import players from '../assets/easysbc/designExamples/players.png';
+import detailedPlayerView from '../assets/easysbc/designExamples/detailed_player_view.png';
+import evolutions from '../assets/easysbc/designExamples/evolutions.png';
+import evolutionBuilder from '../assets/easysbc/designExamples/evolution_builder.png';
+import tactics from '../assets/easysbc/designExamples/tactics.png';
+import squadBuilder from '../assets/easysbc/designExamples/squad_builder.png';
+import metaRatingExplainer from '../assets/easysbc/designExamples/meta_rating_explainer.png';
+import squadTactics from '../assets/easysbc/designExamples/squad_tactics.png';
 
 // drives smooth/eased scrolling site-wide. Lenis animates the native scroll
 // position itself (window.scrollTo under the hood), so it still dispatches
