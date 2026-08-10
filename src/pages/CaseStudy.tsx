@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import Lenis from 'lenis';
 import sbcHomePage from '../assets/sbc_home_page.png';
 import sbcSetPage from '../assets/sbc_set_page.png';
@@ -19,7 +19,7 @@ import squadTactics from '../assets/squad_tactics.png';
 // pick up the smoothed motion.
 function useLenis() {
   useEffect(() => {
-    const lenis = new Lenis({ duration: 1.0, wheelMultiplier: 1.15, touchMultiplier: 1.15 });
+    const lenis = new Lenis({ duration: 1.6, wheelMultiplier: 0.7, touchMultiplier: 0.7 });
     let rafId: number;
     function raf(time: number) {
       lenis.raf(time);
@@ -845,8 +845,8 @@ const ROW4_LABEL_Y = ROW4_Y - LABEL_OFFSET;
 const ROW5_LABEL_Y = ROW5_Y - LABEL_OFFSET;
 const rowLabels = ['background', 'text', 'button', 'chip', 'tag'];
 
-// case-study copy, one block per animation section — see sectionName
-// below for how the boundaries line up with the scroll timeline
+// case-study copy — rendered together as one block, in order, rather
+// than synced to individual animation sections
 const sectionCopy = [
   `EasySBC needed a strong brand feel — something technical enough to match the calculations running underneath it. The interface also had to handle dense data tables and colorful EA artwork without turning cluttered, so I built around a dark blue-grey base that let those colors do the talking. It also happens to suit the low-light conditions most players use when grinding FIFA at night. Blue anchors the palette to match the logo, with an analogous scheme built around it — teal and purple — leaving green and red free for their classic job: clear, unambiguous signal colors.`,
   `As a third-party tool, EasySBC lives or dies on recognizability — a player needs to glance at a stat on the site and instantly know which in-game attribute it maps to. EA also reshuffles its own color coding almost every FC edition, so a handful of colors were deliberately built into the palette as known temporary placeholders — flagged from day one as due for revision, rather than treated as permanent parts of the system.`,
@@ -857,24 +857,6 @@ const sectionCopy = [
 function CaseStudy() {
   useLenis();
   const { ref, progress } = useScrollProgress<HTMLDivElement>();
-
-  // real rendered height of each text block, measured directly rather
-  // than assumed — since the blocks wrap to different numbers of lines,
-  // a fixed slot spacing means the *gap* between blocks (as opposed to
-  // the spacing between their centers/tops) isn't actually equal. These
-  // heights feed the cumulative stacking math below so the visual gap
-  // between one block's bottom and the next one's top is a constant,
-  // regardless of how tall either block is.
-  const textRefs = useRef<(HTMLParagraphElement | null)[]>([]);
-  const [textHeights, setTextHeights] = useState<number[]>(() => sectionCopy.map(() => 0));
-  useLayoutEffect(() => {
-    function measure() {
-      setTextHeights(sectionCopy.map((_, i) => textRefs.current[i]?.offsetHeight ?? 0));
-    }
-    measure();
-    window.addEventListener('resize', measure);
-    return () => window.removeEventListener('resize', measure);
-  }, []);
 
   // five equal sections now split the whole scroll — color palette,
   // color semantics, UI components, wireframes, and overview — each
@@ -1192,96 +1174,6 @@ function CaseStudy() {
           : progress < OVERVIEW_SECTION_START
             ? 'Part 4: Wireframes'
             : 'Part 5: Overview';
-
-  // which of the 5 sections is current, for highlighting below — all
-  // five blocks are visible together, stacked underneath each other,
-  // right from the start; only the active one is highlighted (full
-  // opacity), the rest sit dimmed at 30%, no entrance/exit animation or
-  // overlap
-  const activeSection =
-    progress < SECTION_LEN
-      ? 0
-      : progress < 2 * SECTION_LEN
-        ? 1
-        : progress < TIMELINE_SCALE
-          ? 2
-          : progress < OVERVIEW_SECTION_START
-            ? 3
-            : 4;
-  // the animation canvas is 560px tall, centered in its own h-screen
-  // column via flex items-center — so its own top edge sits at
-  // calc(50% - 280px) of the viewport. The active section's text aligns
-  // with that same edge, rather than a fixed pixel value, so it always
-  // lines up with the top of the animation regardless of viewport height.
-  const CANVAS_HEIGHT = 560;
-  // constant visual gap between the bottom of one text block and the top
-  // of the next — unlike a fixed slot spacing, this stays the same
-  // regardless of how many lines either block wraps to, since it's added
-  // on top of each block's own measured height (see cumulativeTop below)
-  // rather than baked into one shared spacing value.
-  const TEXT_GAP = 64;
-  // running top position of each block if they were simply stacked one
-  // after another (block 0 at 0, block 1 right after block 0's real
-  // height + TEXT_GAP, and so on) — computed from the measured heights
-  // above, so it automatically adapts to however long each paragraph
-  // actually is.
-  const cumulativeTop: number[] = [];
-  {
-    let acc = 0;
-    for (let i = 0; i < sectionCopy.length; i++) {
-      cumulativeTop.push(acc);
-      acc += (textHeights[i] || 0) + TEXT_GAP;
-    }
-  }
-
-  // continuous 0..4 position driving the text stack below — derived
-  // directly from scroll progress (not a fixed-duration CSS transition),
-  // so the roll-in speed always tracks how fast the reader scrolls, and
-  // the text lands on its new slot at the exact moment that section's
-  // own animation stage pauses (SEC*_END), not sooner and not later.
-  // That way the reader watches the animation while it's actively
-  // drawing, and the text finishes arriving right as it stops — cueing
-  // the shift from watching to reading. The very first section has
-  // nothing to roll in from, so it just sits at its slot the whole time.
-  const sectionActiveEnd =
-    activeSection === 0
-      ? SEC1_END
-      : activeSection === 1
-        ? SEC2_END
-        : activeSection === 2
-          ? SEC3_END
-          : activeSection === 3
-            ? SEC4_END
-            : 1;
-  const sectionActiveStart = activeSection * SECTION_LEN;
-  // the roll-in only uses the first slice of the section's active window
-  // (rather than the whole thing) so the text finishes arriving well
-  // before the animation actually pauses — meaning it sits fully
-  // snapped/settled for the rest of that active window *and* the pause
-  // after it, instead of only being settled for the brief pause itself.
-  const TEXT_ROLL_FRACTION = 0.45;
-  const sectionRollEnd =
-    sectionActiveStart + (sectionActiveEnd - sectionActiveStart) * TEXT_ROLL_FRACTION;
-  const sectionProgress =
-    activeSection === 0
-      ? 0
-      : activeSection - 1 + clamp01((progress - sectionActiveStart) / (sectionRollEnd - sectionActiveStart));
-
-  // where the "anchor" point of the stack currently sits, in the same
-  // cumulativeTop px units — interpolated between the two neighboring
-  // blocks' real cumulative positions using sectionProgress's fractional
-  // part, so the whole stack still slides smoothly between real,
-  // unevenly-sized blocks instead of jumping.
-  const activeTopOffsetLowIndex = Math.max(
-    0,
-    Math.min(sectionCopy.length - 1, Math.floor(sectionProgress)),
-  );
-  const activeTopOffsetHighIndex = Math.min(sectionCopy.length - 1, activeTopOffsetLowIndex + 1);
-  const activeTopOffsetFrac = sectionProgress - activeTopOffsetLowIndex;
-  const activeTopOffset =
-    cumulativeTop[activeTopOffsetLowIndex] +
-    (cumulativeTop[activeTopOffsetHighIndex] - cumulativeTop[activeTopOffsetLowIndex]) *
-      activeTopOffsetFrac;
 
   return (
     <div className="bg-[#15181D]">
@@ -2794,83 +2686,40 @@ function CaseStudy() {
           </div>
         </div>
 
-        {/* plain spacer column — these divs carry no text of their own
-            anymore, they exist purely to give the ref container the total
-            height it needs for the overall scroll pace (same ~544vh
-            budget as before). Native CSS sticky can only hold an element
-            in place for (containerHeight - 100vh) of scroll before
-            releasing, which would need a MUCH taller container to cover a
-            full 25% of a reasonably-sized page (checked: to make sticky
-            alone last exactly until the next section, these would have to
-            balloon to 350-400vh+ each, nearly tripling the page length) —
-            so instead, the actual visible text is rendered separately
-            below as fixed-position layers keyed directly to `progress`,
-            which stays stuck for an entire section with no dependency on
-            container height at all. */}
+        {/* right column: no more per-section fixed/sticky text layers keyed
+            to scroll progress — all the copy now lives together in one
+            plain, normal-flow card (same dark panel treatment as the Fruit
+            Sorting page's text box — #1E2126, subtle border, inset top
+            highlight) that scrolls past like ordinary content while the
+            animation stays pinned on the left. The spacer divs around it
+            just preserve roughly the same ~544vh total height this column
+            had before, so the sticky animation's overall pace is
+            unaffected — reading speed is now handled purely by the
+            page's scroll speed (see useLenis) instead of syncing text
+            position to individual animation stages. */}
         <div className="flex flex-col max-w-md">
-          <div style={{ height: '121vh' }} aria-hidden />
-          <div style={{ height: '121vh' }} aria-hidden />
-          <div style={{ height: '121vh' }} aria-hidden />
-          <div style={{ height: '121vh' }} aria-hidden />
+          <div style={{ height: '60vh' }} aria-hidden />
+          <div
+            className="rounded-xl p-6"
+            style={{
+              backgroundColor: '#1E2126',
+              border: '1px solid rgba(255,255,255,0.04)',
+              boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08)',
+            }}
+          >
+            <div className="space-y-4 text-white text-lg">
+              {sectionCopy.map((text, i) => (
+                <p key={i}>{text}</p>
+              ))}
+            </div>
+          </div>
+          <div style={{ height: '424vh' }} aria-hidden />
           {/* trailing buffer: without this, the sticky canvas unsticks and
               starts scrolling away the instant progress hits 1 (there's no
               container height left to keep it pinned), cutting the outro
               off right as it finishes. This holds progress at 1 for a bit
               so the finished state — grid included — stays on screen. */}
           <div className="h-[60vh]" aria-hidden />
-        </div>
-      </div>
-
-      {/* the actual case-study text — all five blocks stacked underneath
-          each other, same x-axis as before (left/width: 50%, unchanged —
-          only the y-position moves). Each block's own `top` is
-          calc(50% - 280px + (cumulativeTop[i] - activeTopOffset)), so the
-          active one always lands exactly on the animation canvas's own
-          top edge (calc(50% - CANVAS_HEIGHT/2), matching how the canvas
-          is centered via flex items-center in its h-screen column)
-          rather than a fixed pixel value — so it stays aligned with the
-          top of the animation at any viewport height. Earlier sections
-          sit above that, later ones sit below, spaced by each block's own
-          measured height plus the constant TEXT_GAP — so the visual gap
-          between blocks is the same everywhere even though the blocks
-          themselves wrap to different heights. Sections above the active
-          one fade to 0; sections below stay dimmed at 30%. Each block sits
-          in a card (same dark panel treatment as the Fruit Sorting page's
-          text box — #1E2126, subtle border, inset top highlight) instead
-          of floating directly over the animation, so it stays legible
-          regardless of what's happening behind it. */}
-      <div
-        className="fixed top-0 h-screen pointer-events-none"
-        style={{ left: '50%', width: '50%', zIndex: 15 }}
-      >
-        <div className="relative h-full">
-          {sectionCopy.map((text, i) => (
-            <div
-              key={i}
-              ref={(el) => {
-                textRefs.current[i] = el;
-              }}
-              className="absolute left-6 max-w-md rounded-xl p-6"
-              style={{
-                top: `calc(50% - ${CANVAS_HEIGHT / 2}px + ${cumulativeTop[i] - activeTopOffset}px)`,
-                opacity: i < activeSection ? 0 : i === activeSection ? 1 : 0.3,
-                backgroundColor: '#1E2126',
-                border: '1px solid rgba(255,255,255,0.04)',
-                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08)',
-                // the very last block has nothing after it to hand off
-                // to — once it fades, the screenshot mosaic is already
-                // appearing right where it sits, so it gets a much
-                // quicker fade-out than the rest to clear out of the way
-                // before it visually collides with the animation.
-                transition:
-                  i === sectionCopy.length - 1 && i < activeSection
-                    ? 'opacity 0.3s ease'
-                    : 'opacity 1.5s ease',
-              }}
-            >
-              <p className="text-white text-lg">{text}</p>
-            </div>
-          ))}
         </div>
       </div>
     </div>

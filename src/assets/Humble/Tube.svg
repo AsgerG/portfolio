@@ -1,0 +1,52 @@
+<svg width="503" height="103" viewBox="0 0 503 103" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g filter="url(#filter0_iiin_392_167)">
+<path d="M1.25 1.25H501.25V45.6944L461.25 101.25H41.25L1.25 45.6944V1.25Z" fill="url(#paint0_linear_392_167)"/>
+<path d="M1.25 45.6944L41.25 101.25H461.25L501.25 45.6944V1.25H1.25V45.6944ZM501.25 45.6944H1.25" stroke="url(#paint1_linear_392_167)" stroke-width="2.5"/>
+</g>
+<defs>
+<filter id="filter0_iiin_392_167" x="-12.5" y="-6.25" width="527.5" height="115" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+<feFlood flood-opacity="0" result="BackgroundImageFix"/>
+<feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/>
+<feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+<feOffset dx="-12.5" dy="6.25"/>
+<feGaussianBlur stdDeviation="6.25"/>
+<feComposite in2="hardAlpha" operator="arithmetic" k2="-1" k3="1"/>
+<feColorMatrix type="matrix" values="0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.55 0"/>
+<feBlend mode="normal" in2="shape" result="effect1_innerShadow_392_167"/>
+<feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+<feOffset dx="12.5" dy="-6.25"/>
+<feGaussianBlur stdDeviation="8.75"/>
+<feComposite in2="hardAlpha" operator="arithmetic" k2="-1" k3="1"/>
+<feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.4 0"/>
+<feBlend mode="normal" in2="effect1_innerShadow_392_167" result="effect2_innerShadow_392_167"/>
+<feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+<feOffset dy="5"/>
+<feGaussianBlur stdDeviation="2.5"/>
+<feComposite in2="hardAlpha" operator="arithmetic" k2="-1" k3="1"/>
+<feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.25 0"/>
+<feBlend mode="normal" in2="effect2_innerShadow_392_167" result="effect3_innerShadow_392_167"/>
+<feTurbulence type="fractalNoise" baseFrequency="0.72727274894714355 0.72727274894714355" stitchTiles="stitch" numOctaves="3" result="noise" seed="3568" />
+<feColorMatrix in="noise" type="luminanceToAlpha" result="alphaNoise" />
+<feComponentTransfer in="alphaNoise" result="coloredNoise1">
+<feFuncA type="discrete" tableValues="1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "/>
+</feComponentTransfer>
+<feComposite operator="in" in2="effect3_innerShadow_392_167" in="coloredNoise1" result="noise1Clipped" />
+<feFlood flood-color="rgba(0, 0, 0, 0.25)" result="color1Flood" />
+<feComposite operator="in" in2="noise1Clipped" in="color1Flood" result="color1" />
+<feMerge result="effect4_noise_392_167">
+<feMergeNode in="effect3_innerShadow_392_167" />
+<feMergeNode in="color1" />
+</feMerge>
+</filter>
+<linearGradient id="paint0_linear_392_167" x1="-206.25" y1="49.1071" x2="522.938" y2="63.3222" gradientUnits="userSpaceOnUse">
+<stop offset="0.441734" stop-color="#3F4650"/>
+<stop offset="0.654796" stop-color="#60656E"/>
+<stop offset="0.825771" stop-color="#404550"/>
+</linearGradient>
+<linearGradient id="paint1_linear_392_167" x1="446.875" y1="87.3214" x2="184.326" y2="-181.474" gradientUnits="userSpaceOnUse">
+<stop offset="0.173022" stop-color="#1E2126"/>
+<stop offset="0.35133" stop-color="#788497"/>
+<stop offset="0.577066" stop-color="#1E2126"/>
+</linearGradient>
+</defs>
+</svg>
