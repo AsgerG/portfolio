@@ -871,7 +871,7 @@ function CaseStudy() {
   const TEXTBOX_MOVE_END = 0.8;
   const TEXTBOX_START_TOP_PCT = 70;
   const TEXTBOX_END_TOP_PCT = -100;
-  const TEXTBOX_START_EXTRA_PX = 320;
+  const TEXTBOX_START_EXTRA_PX = 0;
   const textboxTopPct = lerp(
     TEXTBOX_START_TOP_PCT,
     TEXTBOX_END_TOP_PCT,
