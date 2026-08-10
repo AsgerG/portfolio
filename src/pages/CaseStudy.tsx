@@ -876,21 +876,40 @@ function CaseStudy() {
   // the text box is on screen, restoring normal speed the instant it
   // scrolls out of view — so only reading the text feels slow; scrolling
   // through the rest of the (purely visual) animation is unaffected.
+  //
+  // Two things beyond just flipping wheelMultiplier are needed for this
+  // to actually feel 10x slower rather than barely different: Lenis
+  // eases every scroll input toward a target over `duration` (1.6s) —
+  // dropping the multiplier only shrinks *new* wheel input, it does
+  // nothing to a big flick's worth of momentum from a moment earlier
+  // (still gliding toward its old, unscaled target) that's already in
+  // flight, which is exactly what made the box still feel fast. So (1)
+  // the observer's rootMargin fires the slow-zone a half-viewport early,
+  // giving any earlier fast-zone momentum time to settle before the box
+  // is actually visible, and (2) entering the slow zone hard-clamps
+  // Lenis's target to wherever it actually is right now (`scrollTo(...,
+  // { immediate: true })`), killing any remaining glide outright instead
+  // of hoping it decays in time.
   const textBoxRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const el = textBoxRef.current;
     if (!el) return;
+    let wasIntersecting = false;
     const observer = new IntersectionObserver(
       ([entry]) => {
         const lenis = lenisRef.current;
         if (!lenis) return;
+        if (entry.isIntersecting && !wasIntersecting) {
+          lenis.scrollTo(lenis.animatedScroll, { immediate: true });
+        }
+        wasIntersecting = entry.isIntersecting;
         const multiplier = entry.isIntersecting
           ? TEXT_BOX_SCROLL_MULTIPLIER
           : NORMAL_SCROLL_MULTIPLIER;
         lenis.options.wheelMultiplier = multiplier;
         lenis.options.touchMultiplier = multiplier;
       },
-      { threshold: 0 },
+      { threshold: 0, rootMargin: '50% 0px 50% 0px' },
     );
     observer.observe(el);
     return () => observer.disconnect();
