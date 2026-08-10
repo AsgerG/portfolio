@@ -17,16 +17,10 @@ import easysbcLogo from '../assets/easysbc/easysbc_logo.png';
 // drives smooth/eased scrolling site-wide. Lenis animates the native scroll
 // position itself (window.scrollTo under the hood), so it still dispatches
 // regular 'scroll' events — useScrollProgress below needs no changes to
-// pick up the smoothed motion. Returns a ref to the live instance so
-// other effects (see the text-box slow-zone below) can tweak its options
-// on the fly — Lenis reads wheelMultiplier/touchMultiplier straight off
-// `this.options` on every wheel/touch event, so mutating that object
-// takes effect immediately, no re-init needed.
+// pick up the smoothed motion.
 function useLenis() {
-  const lenisRef = useRef<Lenis | null>(null);
   useEffect(() => {
     const lenis = new Lenis({ duration: 1.6, wheelMultiplier: 0.7, touchMultiplier: 0.7 });
-    lenisRef.current = lenis;
     let rafId: number;
     function raf(time: number) {
       lenis.raf(time);
@@ -36,17 +30,9 @@ function useLenis() {
     return () => {
       cancelAnimationFrame(rafId);
       lenis.destroy();
-      lenisRef.current = null;
     };
   }, []);
-  return lenisRef;
 }
-
-// how much slower scrolling feels while the text box is on screen, vs the
-// rest of the page (the animation) — a straight 10x cut to both wheel and
-// touch scroll distance, restored the instant the box scrolls out of view.
-const NORMAL_SCROLL_MULTIPLIER = 0.7;
-const TEXT_BOX_SCROLL_MULTIPLIER = NORMAL_SCROLL_MULTIPLIER / 10;
 
 function useScrollProgress<T extends HTMLElement>() {
   const ref = useRef<T>(null);
@@ -870,51 +856,23 @@ const sectionCopy = [
 ];
 
 function CaseStudy() {
-  const lenisRef = useLenis();
+  useLenis();
   const { ref, progress } = useScrollProgress<HTMLDivElement>();
 
-  // slows Lenis down to a tenth of its normal speed for exactly as long as
-  // the text box is on screen, restoring normal speed the instant it
-  // scrolls out of view — so only reading the text feels slow; scrolling
-  // through the rest of the (purely visual) animation is unaffected.
-  //
-  // Two things beyond just flipping wheelMultiplier are needed for this
-  // to actually feel 10x slower rather than barely different: Lenis
-  // eases every scroll input toward a target over `duration` (1.6s) —
-  // dropping the multiplier only shrinks *new* wheel input, it does
-  // nothing to a big flick's worth of momentum from a moment earlier
-  // (still gliding toward its old, unscaled target) that's already in
-  // flight, which is exactly what made the box still feel fast. So (1)
-  // the observer's rootMargin fires the slow-zone a half-viewport early,
-  // giving any earlier fast-zone momentum time to settle before the box
-  // is actually visible, and (2) entering the slow zone hard-clamps
-  // Lenis's target to wherever it actually is right now (`scrollTo(...,
-  // { immediate: true })`), killing any remaining glide outright instead
-  // of hoping it decays in time.
-  const textBoxRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const el = textBoxRef.current;
-    if (!el) return;
-    let wasIntersecting = false;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        const lenis = lenisRef.current;
-        if (!lenis) return;
-        if (entry.isIntersecting && !wasIntersecting) {
-          lenis.scrollTo(lenis.animatedScroll, { immediate: true });
-        }
-        wasIntersecting = entry.isIntersecting;
-        const multiplier = entry.isIntersecting
-          ? TEXT_BOX_SCROLL_MULTIPLIER
-          : NORMAL_SCROLL_MULTIPLIER;
-        lenis.options.wheelMultiplier = multiplier;
-        lenis.options.touchMultiplier = multiplier;
-      },
-      { threshold: 0, rootMargin: '50% 0px 50% 0px' },
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [lenisRef]);
+  // the text box is now part of the animation itself rather than normal
+  // scrolling page content: pinned to the viewport (like the canvas) and
+  // driven entirely by `progress`, drifting slowly upward from
+  // TEXTBOX_START_TOP_PCT at progress 0 to TEXTBOX_END_TOP_PCT by
+  // TEXTBOX_MOVE_END (0.8) — clamp01 holds it at that final position for
+  // the rest of the scroll instead of overshooting past it.
+  const TEXTBOX_MOVE_END = 0.8;
+  const TEXTBOX_START_TOP_PCT = 70;
+  const TEXTBOX_END_TOP_PCT = 20;
+  const textboxTopPct = lerp(
+    TEXTBOX_START_TOP_PCT,
+    TEXTBOX_END_TOP_PCT,
+    clamp01(progress / TEXTBOX_MOVE_END),
+  );
 
   // five equal sections now split the whole scroll — color palette,
   // color semantics, UI components, wireframes, and overview — each
@@ -2737,69 +2695,70 @@ function CaseStudy() {
           </div>
         </div>
 
-        {/* right column: no more per-section fixed/sticky text layers keyed
-            to scroll progress — all the copy now lives together in one
-            plain, normal-flow card (same dark panel treatment as the Fruit
-            Sorting page's text box — #1E2126, subtle border, inset top
-            highlight) that scrolls past like ordinary content while the
-            animation stays pinned on the left. The spacer divs around it
-            just preserve roughly the same ~544vh total height this column
-            had before, so the sticky animation's overall pace is
-            unaffected — reading speed is now handled purely by the
-            page's scroll speed (see useLenis) instead of syncing text
-            position to individual animation stages. */}
-        <div className="flex flex-col max-w-md">
-          <div style={{ height: '60vh' }} aria-hidden />
-          <div
-            ref={textBoxRef}
-            className="relative rounded-xl p-6"
-            style={{
-              backgroundColor: '#1E2126',
-              border: '1px solid rgba(255,255,255,0.04)',
-              boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08)',
-              marginLeft: -200,
-            }}
+        {/* right column: carries no visible content of its own anymore —
+            the text box is now a fixed overlay (below), pinned to the
+            viewport and animated by `progress` just like the canvas on
+            the left. These spacer divs exist purely to give the ref
+            container the ~544vh of total height the sticky canvas needs
+            to play out its full timeline. */}
+        <div className="flex flex-col max-w-md" aria-hidden>
+          <div style={{ height: '544vh' }} />
+        </div>
+      </div>
+
+      {/* the text box, pinned to the viewport and driven by `progress` —
+          see textboxTopPct above for the slow upward drift from
+          TEXTBOX_START_TOP_PCT (progress 0) to TEXTBOX_END_TOP_PCT
+          (progress TEXTBOX_MOVE_END, then held there). Same horizontal
+          placement as before (right half of the screen, box itself
+          shifted 200px further left via marginLeft). */}
+      <div
+        className="fixed pointer-events-none"
+        style={{ left: '50%', width: '50%', top: 0, height: '100vh', zIndex: 15 }}
+      >
+        <div
+          className="absolute pointer-events-auto rounded-xl p-6 max-w-md"
+          style={{
+            top: `${textboxTopPct}%`,
+            transform: 'translateY(-50%)',
+            marginLeft: -200,
+            backgroundColor: '#1E2126',
+            border: '1px solid rgba(255,255,255,0.04)',
+            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08)',
+          }}
+        >
+          {/* back to the homepage this case study is reached from —
+              identical placement/spacing to the Fruit Sorting page's
+              box: half the content wrapper's 72px margin (36px, i.e.
+              top-9/left-9) on the left/top */}
+          <a
+            href="#"
+            className="absolute top-9 left-9 z-10 text-sm text-white/40 hover:text-white/70 transition-colors"
           >
-            {/* back to the homepage this case study is reached from —
-                identical placement/spacing to the Fruit Sorting page's
-                box: half the content wrapper's 72px margin (36px, i.e.
-                top-9/left-9) on the left/top */}
-            <a
-              href="#"
-              className="absolute top-9 left-9 z-10 text-sm text-white/40 hover:text-white/70 transition-colors"
-            >
-              ← Back
-            </a>
+            ← Back
+          </a>
 
-            {/* mirrors the DTU/Humble/LEGO logo row on the Fruit Sorting
-                page's box — same top-9/right-9 placement, same 40px size */}
-            <img
-              src={easysbcLogo}
-              alt="EasySBC"
-              className="absolute top-9 right-9 z-10 w-[40px] h-[40px] rounded-full"
-            />
+          {/* mirrors the DTU/Humble/LEGO logo row on the Fruit Sorting
+              page's box — same top-9/right-9 placement, same 40px size */}
+          <img
+            src={easysbcLogo}
+            alt="EasySBC"
+            className="absolute top-9 right-9 z-10 w-[40px] h-[40px] rounded-full"
+          />
 
-            <div className="relative pt-24 px-12 pb-12">
-              <h2 className="text-xl font-semibold mb-1">
-                EasySBC — Color System &amp; Product Design
-              </h2>
-              <p className="text-sm text-white/50 mb-6">
-                Color system, UI components, and product structure for a FIFA squad-building tool
-              </p>
-              <div className="space-y-4 text-white/80 text-lg leading-relaxed">
-                {sectionCopy.map((text, i) => (
-                  <p key={i}>{text}</p>
-                ))}
-              </div>
+          <div className="relative pt-24 px-12 pb-12">
+            <h2 className="text-xl font-semibold mb-1">
+              EasySBC — Color System &amp; Product Design
+            </h2>
+            <p className="text-sm text-white/50 mb-6">
+              Color system, UI components, and product structure for a FIFA squad-building tool
+            </p>
+            <div className="space-y-4 text-white/80 text-lg leading-relaxed">
+              {sectionCopy.map((text, i) => (
+                <p key={i}>{text}</p>
+              ))}
             </div>
           </div>
-          <div style={{ height: '424vh' }} aria-hidden />
-          {/* trailing buffer: without this, the sticky canvas unsticks and
-              starts scrolling away the instant progress hits 1 (there's no
-              container height left to keep it pinned), cutting the outro
-              off right as it finishes. This holds progress at 1 for a bit
-              so the finished state — grid included — stays on screen. */}
-          <div className="h-[60vh]" aria-hidden />
         </div>
       </div>
     </div>
