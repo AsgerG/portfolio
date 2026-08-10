@@ -871,7 +871,7 @@ function CaseStudy() {
   const TEXTBOX_MOVE_END = 0.8;
   const TEXTBOX_START_TOP_PCT = 70;
   const TEXTBOX_END_TOP_PCT = -100;
-  const TEXTBOX_START_EXTRA_PX = 0;
+  const TEXTBOX_START_EXTRA_PX = 20;
   const textboxTopPct = lerp(
     TEXTBOX_START_TOP_PCT,
     TEXTBOX_END_TOP_PCT,
@@ -2725,7 +2725,7 @@ function CaseStudy() {
           style={{
             top: `calc(${textboxTopPct}% + ${TEXTBOX_START_EXTRA_PX}px)`,
             transform: 'translateY(-50%)',
-            marginLeft: -100,
+            marginLeft: -150,
             backgroundColor: '#1E2126',
             border: '1px solid rgba(255,255,255,0.04)',
             boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08)',
