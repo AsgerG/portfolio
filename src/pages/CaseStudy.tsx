@@ -2748,7 +2748,7 @@ function CaseStudy() {
             unaffected — reading speed is now handled purely by the
             page's scroll speed (see useLenis) instead of syncing text
             position to individual animation stages. */}
-        <div className="flex flex-col max-w-[648px]">
+        <div className="flex flex-col max-w-md">
           <div style={{ height: '60vh' }} aria-hidden />
           <div
             ref={textBoxRef}
