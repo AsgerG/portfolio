@@ -2752,7 +2752,7 @@ function CaseStudy() {
           <div style={{ height: '60vh' }} aria-hidden />
           <div
             ref={textBoxRef}
-            className="relative rounded-xl p-8"
+            className="relative rounded-xl p-6"
             style={{
               backgroundColor: '#1E2126',
               border: '1px solid rgba(255,255,255,0.04)',
@@ -2760,23 +2760,25 @@ function CaseStudy() {
             }}
           >
             {/* back to the homepage this case study is reached from —
-                same top-left placement as the Fruit Sorting page's box */}
+                identical placement/spacing to the Fruit Sorting page's
+                box: half the content wrapper's 72px margin (36px, i.e.
+                top-9/left-9) on the left/top */}
             <a
               href="#"
-              className="absolute top-6 left-6 z-10 text-xs text-white/50 hover:text-white/80 transition-colors"
+              className="absolute top-9 left-9 z-10 text-sm text-white/40 hover:text-white/70 transition-colors"
             >
               ← Back
             </a>
 
             {/* mirrors the DTU/Humble/LEGO logo row on the Fruit Sorting
-                page's box, top-right */}
+                page's box — same top-9/right-9 placement, same 40px size */}
             <img
               src={easysbcLogo}
               alt="EasySBC"
-              className="absolute top-6 right-6 w-10 h-10 rounded-full"
+              className="absolute top-9 right-9 z-10 w-[40px] h-[40px] rounded-full"
             />
 
-            <div className="pt-10">
+            <div className="relative pt-24 px-12 pb-12">
               <h2 className="text-xl font-semibold mb-1">
                 EasySBC — Color System &amp; Product Design
               </h2>
