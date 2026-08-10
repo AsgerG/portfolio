@@ -2757,7 +2757,7 @@ function CaseStudy() {
             <p className="text-sm text-white/50 mb-6">
               Color system, UI components, and product structure for a FIFA squad-building tool
             </p>
-            <div className="space-y-4 text-white/80 text-lg leading-relaxed">
+            <div className="space-y-4 text-sm text-white/70 leading-relaxed">
               {sectionCopy.map((text, i) => (
                 <p key={i}>{text}</p>
               ))}
