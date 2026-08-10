@@ -2721,11 +2721,11 @@ function CaseStudy() {
         style={{ left: '50%', width: '50%', top: 0, height: '100vh', zIndex: 15 }}
       >
         <div
-          className="absolute pointer-events-auto rounded-xl p-6 max-w-md"
+          className="absolute pointer-events-auto rounded-xl p-6 max-w-[648px]"
           style={{
             top: `calc(${textboxTopPct}% + ${TEXTBOX_START_EXTRA_PX}px)`,
             transform: 'translateY(-50%)',
-            marginLeft: -200,
+            marginLeft: -100,
             backgroundColor: '#1E2126',
             border: '1px solid rgba(255,255,255,0.04)',
             boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08)',
