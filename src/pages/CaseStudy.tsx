@@ -16,10 +16,16 @@ import squadTactics from '../assets/squad_tactics.png';
 // drives smooth/eased scrolling site-wide. Lenis animates the native scroll
 // position itself (window.scrollTo under the hood), so it still dispatches
 // regular 'scroll' events — useScrollProgress below needs no changes to
-// pick up the smoothed motion.
+// pick up the smoothed motion. Returns a ref to the live instance so
+// other effects (see the text-box slow-zone below) can tweak its options
+// on the fly — Lenis reads wheelMultiplier/touchMultiplier straight off
+// `this.options` on every wheel/touch event, so mutating that object
+// takes effect immediately, no re-init needed.
 function useLenis() {
+  const lenisRef = useRef<Lenis | null>(null);
   useEffect(() => {
-    const lenis = new Lenis({ duration: 1.6, wheelMultiplier: 0.07, touchMultiplier: 0.07 });
+    const lenis = new Lenis({ duration: 1.6, wheelMultiplier: 0.7, touchMultiplier: 0.7 });
+    lenisRef.current = lenis;
     let rafId: number;
     function raf(time: number) {
       lenis.raf(time);
@@ -29,9 +35,17 @@ function useLenis() {
     return () => {
       cancelAnimationFrame(rafId);
       lenis.destroy();
+      lenisRef.current = null;
     };
   }, []);
+  return lenisRef;
 }
+
+// how much slower scrolling feels while the text box is on screen, vs the
+// rest of the page (the animation) — a straight 10x cut to both wheel and
+// touch scroll distance, restored the instant the box scrolls out of view.
+const NORMAL_SCROLL_MULTIPLIER = 0.7;
+const TEXT_BOX_SCROLL_MULTIPLIER = NORMAL_SCROLL_MULTIPLIER / 10;
 
 function useScrollProgress<T extends HTMLElement>() {
   const ref = useRef<T>(null);
@@ -855,8 +869,32 @@ const sectionCopy = [
 ];
 
 function CaseStudy() {
-  useLenis();
+  const lenisRef = useLenis();
   const { ref, progress } = useScrollProgress<HTMLDivElement>();
+
+  // slows Lenis down to a tenth of its normal speed for exactly as long as
+  // the text box is on screen, restoring normal speed the instant it
+  // scrolls out of view — so only reading the text feels slow; scrolling
+  // through the rest of the (purely visual) animation is unaffected.
+  const textBoxRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = textBoxRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        const lenis = lenisRef.current;
+        if (!lenis) return;
+        const multiplier = entry.isIntersecting
+          ? TEXT_BOX_SCROLL_MULTIPLIER
+          : NORMAL_SCROLL_MULTIPLIER;
+        lenis.options.wheelMultiplier = multiplier;
+        lenis.options.touchMultiplier = multiplier;
+      },
+      { threshold: 0 },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [lenisRef]);
 
   // five equal sections now split the whole scroll — color palette,
   // color semantics, UI components, wireframes, and overview — each
@@ -2700,6 +2738,7 @@ function CaseStudy() {
         <div className="flex flex-col max-w-md">
           <div style={{ height: '60vh' }} aria-hidden />
           <div
+            ref={textBoxRef}
             className="rounded-xl p-6"
             style={{
               backgroundColor: '#1E2126',
