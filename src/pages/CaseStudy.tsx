@@ -19,7 +19,7 @@ import squadTactics from '../assets/squad_tactics.png';
 // pick up the smoothed motion.
 function useLenis() {
   useEffect(() => {
-    const lenis = new Lenis({ duration: 1.6, wheelMultiplier: 0.7, touchMultiplier: 0.7 });
+    const lenis = new Lenis({ duration: 1.6, wheelMultiplier: 0.07, touchMultiplier: 0.07 });
     let rafId: number;
     function raf(time: number) {
       lenis.raf(time);
