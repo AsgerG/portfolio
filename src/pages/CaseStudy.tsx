@@ -18,8 +18,6 @@ import brandValues from '../assets/easysbc/brand_values.png';
 import fc25Pack from '../assets/easysbc/fc25_pack.png';
 import fc26Pack from '../assets/easysbc/fc26_pack.png';
 import genericPack from '../assets/easysbc/generic_pack.png';
-import lateNights from '../assets/easysbc/lateNights.png';
-import workshops from '../assets/easysbc/Workshops.png';
 
 // drives smooth/eased scrolling site-wide. Lenis animates the native scroll
 // position itself (window.scrollTo under the hood), so it still dispatches
@@ -867,7 +865,13 @@ type CaseStudyBlock =
       heightPx?: number; // all images in the row share this height, width follows each one's own aspect ratio — defaults to 220
       gapPx?: number; // horizontal gap between images — defaults to 16
       plain?: boolean; // true = no rounded corners/border, drop-shadow instead (packs); false/omitted = rounded-lg + border (brand pair)
-    };
+    }
+  // a fixed pair of CTA buttons — 'show me the designs' smooth-scrolls
+  // further down this same page to where the screenshot mosaic is fully
+  // in view; 'learn more' has no destination wired up yet (no live-site
+  // URL or secondary page to point it at), so it's a plain placeholder
+  // link for now.
+  | { type: 'buttons' };
 
 const caseStudySections: { heading: string; blocks: CaseStudyBlock[] }[] = [
   {
@@ -946,13 +950,7 @@ const caseStudySections: { heading: string; blocks: CaseStudyBlock[] }[] = [
         type: 'paragraph',
         text: 'Alongside them, early prototypes went straight back to the community: workshops and user testing sessions shaped the flows just as much as any internal review, keeping the product honest to the people actually grinding it every day.',
       },
-      {
-        type: 'imageRow',
-        images: [
-          { src: lateNights, alt: 'Late night working session', caption: 'Late nights' },
-          { src: workshops, alt: 'Workshop and user testing session', caption: 'Workshops and user testing' },
-        ],
-      },
+      { type: 'buttons' },
     ],
   },
 ];
@@ -960,6 +958,20 @@ const caseStudySections: { heading: string; blocks: CaseStudyBlock[] }[] = [
 function CaseStudy() {
   useLenis();
   const { ref, progress } = useScrollProgress<HTMLDivElement>();
+
+  // scrolls further down this same page to where the screenshot mosaic
+  // (the Overview section, progress ~0.85 — well after the text box has
+  // cleared the viewport at ~0.8) is fully in view, using the same
+  // rect-based progress math useScrollProgress itself uses, just solved
+  // in reverse (target progress -> target scrollY).
+  function scrollToDesigns() {
+    const node = ref.current;
+    if (!node) return;
+    const rect = node.getBoundingClientRect();
+    const total = rect.height - window.innerHeight;
+    const nodeTop = rect.top + window.scrollY;
+    window.scrollTo({ top: nodeTop + 0.85 * total, behavior: 'smooth' });
+  }
 
   // the text box is now part of the animation itself rather than normal
   // scrolling page content: pinned to the viewport (like the canvas) and
@@ -2918,6 +2930,25 @@ function CaseStudy() {
                                 </figcaption>
                               </figure>
                             ))}
+                          </div>
+                        );
+                      }
+                      if (block.type === 'buttons') {
+                        return (
+                          <div key={i} className="flex gap-4 not-prose">
+                            <button
+                              type="button"
+                              onClick={scrollToDesigns}
+                              className="flex-1 rounded-lg bg-white/10 hover:bg-white/20 transition-colors px-6 py-4 text-sm font-medium text-white text-center"
+                            >
+                              Show me the designs
+                            </button>
+                            <a
+                              href="#"
+                              className="flex-1 rounded-lg bg-white/10 hover:bg-white/20 transition-colors px-6 py-4 text-sm font-medium text-white text-center"
+                            >
+                              Learn more →
+                            </a>
                           </div>
                         );
                       }
