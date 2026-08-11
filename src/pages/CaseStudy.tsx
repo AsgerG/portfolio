@@ -846,13 +846,74 @@ const ROW4_LABEL_Y = ROW4_Y - LABEL_OFFSET;
 const ROW5_LABEL_Y = ROW5_Y - LABEL_OFFSET;
 const rowLabels = ['background', 'text', 'button', 'chip', 'tag'];
 
-// case-study copy — rendered together as one block, in order, rather
-// than synced to individual animation sections
-const sectionCopy = [
-  `EasySBC needed a strong brand feel — something technical enough to match the calculations running underneath it. The interface also had to handle dense data tables and colorful EA artwork without turning cluttered, so I built around a dark blue-grey base that let those colors do the talking. It also happens to suit the low-light conditions most players use when grinding FIFA at night. Blue anchors the palette to match the logo, with an analogous scheme built around it — teal and purple — leaving green and red free for their classic job: clear, unambiguous signal colors.`,
-  `As a third-party tool, EasySBC lives or dies on recognizability — a player needs to glance at a stat on the site and instantly know which in-game attribute it maps to. EA also reshuffles its own color coding almost every FC edition, so a handful of colors were deliberately built into the palette as known temporary placeholders — flagged from day one as due for revision, rather than treated as permanent parts of the system.`,
-  `Every component was checked against the same bar: color contrast, colorblindness, sizing, and SEO compliance. Those checks became a living set of guidelines — exactly where and how each color and element was allowed to be used, so the system stayed consistent as it grew.`,
-  `Wireframes were part of the process from day one of the MVP — sketching out structure and flow before any color or polish entered the picture, so the underlying logic held up on its own.`,
+// case-study copy — grouped into named sections, each a mix of paragraphs
+// and image placeholders (real assets pending — see each placeholder's
+// caption for what it's standing in for), rendered together as one block
+// in order rather than synced to individual animation sections.
+type CaseStudyBlock =
+  | { type: 'paragraph'; text: string }
+  | { type: 'image'; caption: string };
+
+const caseStudySections: { heading: string; blocks: CaseStudyBlock[] }[] = [
+  {
+    heading: 'Color Palette',
+    blocks: [
+      {
+        type: 'paragraph',
+        text: "EasySBC's design evolved through several generations — from a handful of basic frontend elements supporting a minimal product, to a comprehensive design system with its own rules, guidelines, and a stronger brand identity built on established UX practice.",
+      },
+      {
+        type: 'paragraph',
+        text: "Throughout that, the user stayed at the center. EasySBC started with a friend of mine who was tired of FIFA's in-game shortcomings. Talking to the community, we found players who were tired of letting the game's publisher dictate how they played — elaborate guides on which in-game ratings to trust, and workarounds for the game's endless grinds, passed from player to player. If we were going to build a business around solving that, it was clear these dedicated players were our bread and butter, and it was their fan community that shaped the brand and the site as it grew.",
+      },
+      {
+        type: 'paragraph',
+        text: "We wanted to build more than a set of tools — a place where players could share what they'd found, compare notes, and hold onto some agency over how they played the game.",
+      },
+      { type: 'image', caption: 'Our brand — brand colours and feel' },
+      {
+        type: 'paragraph',
+        text: "EasySBC's product itself was technically dense, and the interface needed to hold up under that weight without ever feeling cheap or out of step with the calculations running underneath it. The interface also had to handle dense data tables and colorful EA artwork without turning cluttered, so I built around a dark blue-grey base that let those colors do the talking.",
+      },
+      {
+        type: 'paragraph',
+        text: "It's a palette well suited to the low-light conditions most players use when grinding FIFA at night. Blue anchors the palette to match the logo, with an analogous scheme built around it — teal and purple — leaving green and red free for their classic job: clear, unambiguous signal colors.",
+      },
+    ],
+  },
+  {
+    heading: 'Color Semantics & UI Components',
+    blocks: [
+      {
+        type: 'paragraph',
+        text: 'As a third-party tool, EasySBC lives or dies on recognizability — a player needs to glance at a stat on the site and instantly know which in-game attribute it maps to. EA also reshuffles its own color coding almost every FC edition, so a handful of colors were deliberately built into the palette as known temporary placeholders — flagged from day one as due for revision, rather than treated as permanent parts of the system.',
+      },
+      {
+        type: 'paragraph',
+        text: 'Every component was checked against the same bar: color contrast, colorblindness, sizing, and SEO compliance. Those checks became a living set of guidelines — exactly where and how each color and element was allowed to be used, so the system stayed consistent as it grew.',
+      },
+      { type: 'image', caption: 'Varying assets — generic and replaceable' },
+      {
+        type: 'paragraph',
+        text: "EasySBC's own product never stood still — SBC requirements, meta ratings, and EA's in-game systems could shift with every update, sometimes weekly. Designing for that meant building components generic and replaceable by default: assets that could be swapped or restyled without the rest of the system falling apart around them.",
+      },
+    ],
+  },
+  {
+    heading: 'Wireframes',
+    blocks: [
+      {
+        type: 'paragraph',
+        text: 'Wireframes were part of the process from day one of the MVP — sketching out structure and flow before any color or polish entered the picture, so the underlying logic held up on its own.',
+      },
+      {
+        type: 'paragraph',
+        text: 'Alongside them, early prototypes went straight back to the community: workshops and user testing sessions shaped the flows just as much as any internal review, keeping the product honest to the people actually grinding it every day.',
+      },
+      { type: 'image', caption: 'Late nights' },
+      { type: 'image', caption: 'Workshops and user testing' },
+    ],
+  },
 ];
 
 function CaseStudy() {
@@ -2757,9 +2818,25 @@ function CaseStudy() {
             <p className="text-sm text-white/50 mb-6">
               Color system, UI components, and product structure for a FIFA squad-building tool
             </p>
-            <div className="space-y-4 text-sm text-white/70 leading-relaxed">
-              {sectionCopy.map((text, i) => (
-                <p key={i}>{text}</p>
+            <div className="space-y-8">
+              {caseStudySections.map((section) => (
+                <div key={section.heading}>
+                  <h3 className="text-base font-semibold mb-3">{section.heading}</h3>
+                  <div className="space-y-4 text-sm text-white/70 leading-relaxed">
+                    {section.blocks.map((block, i) =>
+                      block.type === 'paragraph' ? (
+                        <p key={i}>{block.text}</p>
+                      ) : (
+                        <div
+                          key={i}
+                          className="rounded-lg border border-dashed border-white/15 bg-white/[0.03] flex items-center justify-center text-center px-4 py-10 text-xs text-white/40"
+                        >
+                          Image placeholder — {block.caption}
+                        </div>
+                      ),
+                    )}
+                  </div>
+                </div>
               ))}
             </div>
           </div>
