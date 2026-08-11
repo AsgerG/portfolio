@@ -2851,7 +2851,7 @@ function CaseStudy() {
                                 <img
                                   src={img.src}
                                   alt={img.alt}
-                                  className="h-48 w-auto rounded-lg border border-white/10 object-cover"
+                                  className="h-[292px] w-auto rounded-lg border border-white/10 object-cover"
                                 />
                                 <figcaption className="mt-1.5 text-xs text-white/40">
                                   {img.caption}
