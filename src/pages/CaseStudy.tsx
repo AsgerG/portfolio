@@ -887,8 +887,8 @@ const caseStudySections: { heading: string; blocks: CaseStudyBlock[] }[] = [
         type: 'imageRow',
         heightPx: 292,
         images: [
-          { src: brandSlogan, alt: 'EasySBC brand slogan', caption: 'Brand slogan' },
           { src: brandValues, alt: 'EasySBC brand values', caption: 'Brand values' },
+          { src: brandSlogan, alt: 'EasySBC brand slogan', caption: 'Brand slogan' },
         ],
       },
       {
