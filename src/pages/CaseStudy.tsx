@@ -2838,14 +2838,20 @@ function CaseStudy() {
                         return <p key={i}>{block.text}</p>;
                       }
                       if (block.type === 'imagePair') {
+                        // fixed height, auto width — the two source
+                        // images have different aspect ratios (one
+                        // square, one portrait), so matching them to
+                        // equal width (the old w-1/2 approach) left them
+                        // at very different heights. Matching height
+                        // instead keeps them visually paired.
                         return (
-                          <div key={i} className="flex gap-4 not-prose">
+                          <div key={i} className="flex items-start gap-4 not-prose">
                             {block.images.map((img) => (
-                              <figure key={img.src} className="w-1/2">
+                              <figure key={img.src}>
                                 <img
                                   src={img.src}
                                   alt={img.alt}
-                                  className="w-full rounded-lg border border-white/10"
+                                  className="h-48 w-auto rounded-lg border border-white/10 object-cover"
                                 />
                                 <figcaption className="mt-1.5 text-xs text-white/40">
                                   {img.caption}
