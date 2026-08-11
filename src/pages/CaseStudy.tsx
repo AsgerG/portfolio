@@ -1008,8 +1008,9 @@ function CaseStudy() {
   // scrolling page content: pinned to the viewport (like the canvas) and
   // driven entirely by `progress`, drifting slowly upward from a starting
   // top-edge position to a fully-off-screen one by TEXTBOX_MOVE_END
-  // (0.95) — clamp01 holds it at that final rest position for the rest
-  // of the scroll instead of overshooting past it.
+  // (0.9 — the box is guaranteed fully clear of the viewport by this
+  // point, not just approximately) — clamp01 holds it at that final rest
+  // position for the rest of the scroll instead of overshooting past it.
   //
   // Previously this used a percent-of-viewport + constant-px formula
   // tuned by trial and error against an assumed box height, which kept
@@ -1021,9 +1022,9 @@ function CaseStudy() {
   // text box sits when that page first loads (pt-10 (40px) +
   // marginTop:280, minus its own window.scrollTo(0, 150) on mount —
   // 40 + 280 - 150 = 170) — and the end position is derived directly
-  // from the measured height plus a fixed buffer, so it's always
-  // fully off-screen by 0.95 regardless of how tall the box gets.
-  const TEXTBOX_MOVE_END = 0.95;
+  // from the measured height plus a fixed buffer, so it's always fully
+  // off-screen by TEXTBOX_MOVE_END regardless of how tall the box gets.
+  const TEXTBOX_MOVE_END = 0.9;
   const TEXTBOX_START_TOP_EDGE_PX = 170;
   const TEXTBOX_EXIT_BUFFER_PX = 200;
   const textBoxStartCenterPx = TEXTBOX_START_TOP_EDGE_PX + textBoxHeight / 2;
