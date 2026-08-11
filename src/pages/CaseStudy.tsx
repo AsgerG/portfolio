@@ -863,6 +863,8 @@ type CaseStudyBlock =
       type: 'imageRow';
       images: { src: string; alt: string; caption: string }[];
       heightPx?: number; // all images in the row share this height, width follows each one's own aspect ratio — defaults to 220
+      gapPx?: number; // horizontal gap between images — defaults to 16
+      plain?: boolean; // true = no rounded corners/border, drop-shadow instead (packs); false/omitted = rounded-lg + border (brand pair)
     };
 
 const caseStudySections: { heading: string; blocks: CaseStudyBlock[] }[] = [
@@ -920,7 +922,9 @@ const caseStudySections: { heading: string; blocks: CaseStudyBlock[] }[] = [
       },
       {
         type: 'imageRow',
-        heightPx: 200,
+        heightPx: 150,
+        gapPx: 32,
+        plain: true,
         images: [
           { src: fc25Pack, alt: 'FC25 pack art', caption: 'FC25' },
           { src: fc26Pack, alt: 'FC26 pack art', caption: 'FC26' },
@@ -2866,17 +2870,38 @@ function CaseStudy() {
                         // ratio, so matching them to equal width left
                         // them at very different heights. Matching
                         // height instead keeps every image in the row
-                        // visually paired, however many there are.
+                        // visually paired, however many there are. The
+                        // whole row is centered (both the row within the
+                        // column, and each image against the others).
+                        // `plain` (used for the packs) swaps the
+                        // rounded-lg + border card treatment for a soft
+                        // drop-shadow instead, since pack art already has
+                        // its own edges/shape — a hard rounded-rect
+                        // border fought with that rather than framing it.
                         const heightPx = block.heightPx ?? 220;
+                        const gapPx = block.gapPx ?? 16;
                         return (
-                          <div key={i} className="flex items-start gap-4 not-prose">
+                          <div
+                            key={i}
+                            className="flex items-center justify-center not-prose"
+                            style={{ gap: gapPx }}
+                          >
                             {block.images.map((img) => (
-                              <figure key={img.src}>
+                              <figure key={img.src} className="flex flex-col items-center">
                                 <img
                                   src={img.src}
                                   alt={img.alt}
-                                  style={{ height: heightPx }}
-                                  className="w-auto rounded-lg border border-white/10 object-cover"
+                                  style={{
+                                    height: heightPx,
+                                    filter: block.plain
+                                      ? 'drop-shadow(0px 4px 8px rgba(0, 0, 0, 0.3))'
+                                      : undefined,
+                                  }}
+                                  className={
+                                    block.plain
+                                      ? 'w-auto object-cover'
+                                      : 'w-auto rounded-lg border border-white/10 object-cover'
+                                  }
                                 />
                                 <figcaption className="mt-1.5 text-xs text-white/40">
                                   {img.caption}
