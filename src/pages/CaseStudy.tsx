@@ -965,15 +965,17 @@ function CaseStudy() {
   // scrolling page content: pinned to the viewport (like the canvas) and
   // driven entirely by `progress`, drifting slowly upward from
   // TEXTBOX_START_TOP_PCT (+ the extra TEXTBOX_START_EXTRA_PX push down)
-  // at progress 0, to TEXTBOX_END_TOP_PCT by TEXTBOX_MOVE_END (0.8) —
-  // clamp01 holds it at that final position for the rest of the scroll
-  // instead of overshooting past it. -500% puts the box's center 5
-  // viewport heights above the top of the screen — covers the constant
-  // +1020px downward push (see TEXTBOX_START_EXTRA_PX) plus a generous
-  // margin for the box's own height (it's grown a lot since this was
-  // last tuned, now that it holds three full sections of copy and
-  // images) — comfortably off-screen by 0.8 on any realistic viewport.
-  const TEXTBOX_MOVE_END = 0.8;
+  // at progress 0, to TEXTBOX_END_TOP_PCT by TEXTBOX_MOVE_END (0.95,
+  // raised from 0.8 to spread the same journey over more of the scroll —
+  // i.e. move slower) — clamp01 holds it at that final position for the
+  // rest of the scroll instead of overshooting past it. -500% puts the
+  // box's center 5 viewport heights above the top of the screen —
+  // covers the constant +1020px downward push (see
+  // TEXTBOX_START_EXTRA_PX) plus a generous margin for the box's own
+  // height (it's grown a lot since this was last tuned, now that it
+  // holds three full sections of copy and images) — comfortably
+  // off-screen by TEXTBOX_MOVE_END on any realistic viewport.
+  const TEXTBOX_MOVE_END = 0.95;
   const TEXTBOX_START_TOP_PCT = 70;
   const TEXTBOX_END_TOP_PCT = -500;
   const TEXTBOX_START_EXTRA_PX = 1020;
@@ -2862,7 +2864,7 @@ function CaseStudy() {
             <p className="text-sm text-white/50 mb-6">
               Color system, UI components, and product structure for a FIFA squad-building tool
             </p>
-            <div className="space-y-8">
+            <div className="space-y-16">
               {caseStudySections.map((section) => (
                 <div key={section.heading}>
                   <h3 className="text-base font-semibold mb-3">{section.heading}</h3>
