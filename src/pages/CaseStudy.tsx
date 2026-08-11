@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import Lenis from 'lenis';
 import sbcHomePage from '../assets/easysbc/designExamples/sbc_home_page.png';
 import sbcSetPage from '../assets/easysbc/designExamples/sbc_set_page.png';
@@ -959,6 +959,25 @@ function CaseStudy() {
   useLenis();
   const { ref, progress } = useScrollProgress<HTMLDivElement>();
 
+  // real rendered height of the text box, measured directly (rather than
+  // guessed at) so its vertical drift can be computed in actual pixels —
+  // see textboxTopPx below. Re-measured whenever the box's own size
+  // changes (new content, font load, window resize), same pattern used
+  // for FruitSorting's wrapper measurement.
+  const textBoxRef = useRef<HTMLDivElement>(null);
+  const [textBoxHeight, setTextBoxHeight] = useState(0);
+  useLayoutEffect(() => {
+    const el = textBoxRef.current;
+    if (!el) return;
+    function measure() {
+      if (el) setTextBoxHeight(el.offsetHeight);
+    }
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
   // slow, deliberately cinematic scroll all the way to the bottom of the
   // page (past the finished screenshot mosaic and the trailing buffer),
   // rather than an instant jump or the browser's own (fairly quick,
@@ -987,26 +1006,31 @@ function CaseStudy() {
 
   // the text box is now part of the animation itself rather than normal
   // scrolling page content: pinned to the viewport (like the canvas) and
-  // driven entirely by `progress`, drifting slowly upward from
-  // TEXTBOX_START_TOP_PCT (+ the extra TEXTBOX_START_EXTRA_PX push down)
-  // at progress 0, all the way to TEXTBOX_END_TOP_PCT by TEXTBOX_MOVE_END
+  // driven entirely by `progress`, drifting slowly upward from a starting
+  // top-edge position to a fully-off-screen one by TEXTBOX_MOVE_END
   // (0.95) — clamp01 holds it at that final rest position for the rest
   // of the scroll instead of overshooting past it.
   //
-  // Note the *rest position* (reached at 0.95) and the point where the
-  // box visually clears the viewport are two different things: because
-  // the lerp is linear, the box is already fully off-screen well before
-  // it settles at its final spot. TEXTBOX_END_TOP_PCT is tuned by that
-  // visual-exit point, not the rest position itself — it was -500
-  // (exiting around progress 0.5) and is now -290, calibrated so the
-  // box clears the viewport around progress 0.8 instead.
+  // Previously this used a percent-of-viewport + constant-px formula
+  // tuned by trial and error against an assumed box height, which kept
+  // drifting out of sync as the box grew (more sections, more images).
+  // Now it measures the box's real rendered height (textBoxHeight, via
+  // the ResizeObserver below) and works entirely in top-edge pixels
+  // instead: TEXTBOX_START_TOP_EDGE_PX is the box's on-screen position
+  // at progress 0 — 170px, matching where the Fruit Sorting page's own
+  // text box sits when that page first loads (pt-10 (40px) +
+  // marginTop:280, minus its own window.scrollTo(0, 150) on mount —
+  // 40 + 280 - 150 = 170) — and the end position is derived directly
+  // from the measured height plus a fixed buffer, so it's always
+  // fully off-screen by 0.95 regardless of how tall the box gets.
   const TEXTBOX_MOVE_END = 0.95;
-  const TEXTBOX_START_TOP_PCT = 70;
-  const TEXTBOX_END_TOP_PCT = -290;
-  const TEXTBOX_START_EXTRA_PX = 1020;
-  const textboxTopPct = lerp(
-    TEXTBOX_START_TOP_PCT,
-    TEXTBOX_END_TOP_PCT,
+  const TEXTBOX_START_TOP_EDGE_PX = 170;
+  const TEXTBOX_EXIT_BUFFER_PX = 200;
+  const textBoxStartCenterPx = TEXTBOX_START_TOP_EDGE_PX + textBoxHeight / 2;
+  const textBoxEndCenterPx = -(textBoxHeight + TEXTBOX_EXIT_BUFFER_PX) + textBoxHeight / 2;
+  const textboxTopPx = lerp(
+    textBoxStartCenterPx,
+    textBoxEndCenterPx,
     clamp01(progress / TEXTBOX_MOVE_END),
   );
 
@@ -2843,8 +2867,8 @@ function CaseStudy() {
       </div>
 
       {/* the text box, pinned to the viewport and driven by `progress` —
-          see textboxTopPct above for the slow upward drift from
-          TEXTBOX_START_TOP_PCT (progress 0) to TEXTBOX_END_TOP_PCT
+          see textboxTopPx above for the slow upward drift from
+          TEXTBOX_START_TOP_EDGE_PX (progress 0) to fully off-screen
           (progress TEXTBOX_MOVE_END, then held there). Same horizontal
           placement as before (right half of the screen, box itself
           shifted 200px further left via marginLeft). */}
@@ -2853,9 +2877,10 @@ function CaseStudy() {
         style={{ left: '50%', width: '50%', top: 0, height: '100vh', zIndex: 15 }}
       >
         <div
+          ref={textBoxRef}
           className="absolute pointer-events-auto rounded-xl p-6 max-w-[648px]"
           style={{
-            top: `calc(${textboxTopPct}% + ${TEXTBOX_START_EXTRA_PX}px)`,
+            top: textboxTopPx,
             transform: 'translateY(-50%)',
             marginLeft: -150,
             backgroundColor: '#1E2126',
