@@ -959,18 +959,30 @@ function CaseStudy() {
   useLenis();
   const { ref, progress } = useScrollProgress<HTMLDivElement>();
 
-  // scrolls further down this same page to where the screenshot mosaic
-  // (the Overview section, progress ~0.85 — well after the text box has
-  // cleared the viewport at ~0.8) is fully in view, using the same
-  // rect-based progress math useScrollProgress itself uses, just solved
-  // in reverse (target progress -> target scrollY).
+  // slow, deliberately cinematic scroll all the way to the bottom of the
+  // page (past the finished screenshot mosaic and the trailing buffer),
+  // rather than an instant jump or the browser's own (fairly quick,
+  // non-configurable) native smooth scroll. Driven by a manual rAF loop
+  // with ease-in-out timing over SCROLL_TO_BOTTOM_DURATION, calling
+  // window.scrollTo every frame — Lenis just observes the resulting
+  // scroll position via the regular 'scroll' events it already listens
+  // for, same as it would for any other scroll.
   function scrollToDesigns() {
-    const node = ref.current;
-    if (!node) return;
-    const rect = node.getBoundingClientRect();
-    const total = rect.height - window.innerHeight;
-    const nodeTop = rect.top + window.scrollY;
-    window.scrollTo({ top: nodeTop + 0.85 * total, behavior: 'smooth' });
+    const SCROLL_TO_BOTTOM_DURATION = 5000;
+    const startY = window.scrollY;
+    const targetY = document.documentElement.scrollHeight - window.innerHeight;
+    const startTime = performance.now();
+
+    function easeInOutQuad(t: number) {
+      return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+    }
+
+    function step(now: number) {
+      const t = Math.min(1, (now - startTime) / SCROLL_TO_BOTTOM_DURATION);
+      window.scrollTo(0, startY + (targetY - startY) * easeInOutQuad(t));
+      if (t < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
   }
 
   // the text box is now part of the animation itself rather than normal
