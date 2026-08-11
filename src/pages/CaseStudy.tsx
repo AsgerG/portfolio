@@ -15,6 +15,9 @@ import squadTactics from '../assets/easysbc/designExamples/squad_tactics.png';
 import easysbcLogo from '../assets/easysbc/easysbc_logo.png';
 import brandSlogan from '../assets/easysbc/brand_slogan.png';
 import brandValues from '../assets/easysbc/brand_values.png';
+import fc25Pack from '../assets/easysbc/fc25_pack.png';
+import fc26Pack from '../assets/easysbc/fc26_pack.png';
+import genericPack from '../assets/easysbc/generic_pack.png';
 
 // drives smooth/eased scrolling site-wide. Lenis animates the native scroll
 // position itself (window.scrollTo under the hood), so it still dispatches
@@ -856,7 +859,11 @@ const rowLabels = ['background', 'text', 'button', 'chip', 'tag'];
 type CaseStudyBlock =
   | { type: 'paragraph'; text: string }
   | { type: 'image'; caption: string }
-  | { type: 'imagePair'; images: { src: string; alt: string; caption: string }[] };
+  | {
+      type: 'imageRow';
+      images: { src: string; alt: string; caption: string }[];
+      heightPx?: number; // all images in the row share this height, width follows each one's own aspect ratio — defaults to 220
+    };
 
 const caseStudySections: { heading: string; blocks: CaseStudyBlock[] }[] = [
   {
@@ -875,7 +882,8 @@ const caseStudySections: { heading: string; blocks: CaseStudyBlock[] }[] = [
         text: "We wanted to build more than a set of tools — a place where players could share what they'd found, compare notes, and hold onto some agency over how they played the game.",
       },
       {
-        type: 'imagePair',
+        type: 'imageRow',
+        heightPx: 292,
         images: [
           { src: brandSlogan, alt: 'EasySBC brand slogan', caption: 'Brand slogan' },
           { src: brandValues, alt: 'EasySBC brand values', caption: 'Brand values' },
@@ -902,10 +910,22 @@ const caseStudySections: { heading: string; blocks: CaseStudyBlock[] }[] = [
         type: 'paragraph',
         text: 'Every component was checked against the same bar: color contrast, colorblindness, sizing, and SEO compliance. Those checks became a living set of guidelines — exactly where and how each color and element was allowed to be used, so the system stayed consistent as it grew.',
       },
-      { type: 'image', caption: 'Varying assets — generic and replaceable' },
       {
         type: 'paragraph',
         text: "EasySBC's own product never stood still — SBC requirements, meta ratings, and EA's in-game systems could shift with every update, sometimes weekly. Designing for that meant building components generic and replaceable by default: assets that could be swapped or restyled without the rest of the system falling apart around them.",
+      },
+      {
+        type: 'paragraph',
+        text: 'That same thinking carried over to our commercial visual assets — alongside pack art tied to specific FC releases, we built a generic pack design that worked across editions, so a campaign built once could be reused as-is from FC25 into FC26 and beyond, instead of getting redesigned from scratch every year.',
+      },
+      {
+        type: 'imageRow',
+        heightPx: 200,
+        images: [
+          { src: fc25Pack, alt: 'FC25 pack art', caption: 'FC25' },
+          { src: fc26Pack, alt: 'FC26 pack art', caption: 'FC26' },
+          { src: genericPack, alt: 'Generic, edition-agnostic pack art', caption: 'Generic' },
+        ],
       },
     ],
   },
@@ -2837,13 +2857,14 @@ function CaseStudy() {
                       if (block.type === 'paragraph') {
                         return <p key={i}>{block.text}</p>;
                       }
-                      if (block.type === 'imagePair') {
-                        // fixed height, auto width — the two source
-                        // images have different aspect ratios (one
-                        // square, one portrait), so matching them to
-                        // equal width (the old w-1/2 approach) left them
-                        // at very different heights. Matching height
-                        // instead keeps them visually paired.
+                      if (block.type === 'imageRow') {
+                        // fixed height, auto width per image — the
+                        // source images don't all share one aspect
+                        // ratio, so matching them to equal width left
+                        // them at very different heights. Matching
+                        // height instead keeps every image in the row
+                        // visually paired, however many there are.
+                        const heightPx = block.heightPx ?? 220;
                         return (
                           <div key={i} className="flex items-start gap-4 not-prose">
                             {block.images.map((img) => (
@@ -2851,7 +2872,8 @@ function CaseStudy() {
                                 <img
                                   src={img.src}
                                   alt={img.alt}
-                                  className="h-[292px] w-auto rounded-lg border border-white/10 object-cover"
+                                  style={{ height: heightPx }}
+                                  className="w-auto rounded-lg border border-white/10 object-cover"
                                 />
                                 <figcaption className="mt-1.5 text-xs text-white/40">
                                   {img.caption}
