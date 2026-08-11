@@ -1397,8 +1397,8 @@ function CaseStudy() {
               style={{
                 left: 230,
                 top: 280,
-                width: 400,
-                height: 400 * (400 / 660),
+                width: 350,
+                height: 350 * (400 / 660),
                 transform: 'translate(-50%, -50%)',
                 opacity: svgOpacity,
               }}
