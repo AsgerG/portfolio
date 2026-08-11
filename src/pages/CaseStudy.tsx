@@ -1007,10 +1007,7 @@ function CaseStudy() {
   // the text box is now part of the animation itself rather than normal
   // scrolling page content: pinned to the viewport (like the canvas) and
   // driven entirely by `progress`, drifting slowly upward from a starting
-  // top-edge position to a fully-off-screen one by TEXTBOX_MOVE_END
-  // (0.9 — the box is guaranteed fully clear of the viewport by this
-  // point, not just approximately) — clamp01 holds it at that final rest
-  // position for the rest of the scroll instead of overshooting past it.
+  // top-edge position to a fully-off-screen one.
   //
   // Previously this used a percent-of-viewport + constant-px formula
   // tuned by trial and error against an assumed box height, which kept
@@ -1022,13 +1019,32 @@ function CaseStudy() {
   // text box sits when that page first loads (pt-10 (40px) +
   // marginTop:280, minus its own window.scrollTo(0, 150) on mount —
   // 40 + 280 - 150 = 170) — and the end position is derived directly
-  // from the measured height plus a fixed buffer, so it's always fully
-  // off-screen by TEXTBOX_MOVE_END regardless of how tall the box gets.
-  const TEXTBOX_MOVE_END = 0.9;
+  // from the measured height plus a fixed exit buffer.
+  //
+  // TEXTBOX_EXIT_PROGRESS is the actual thing being controlled here: the
+  // scroll progress at which the box's bottom edge crosses the top of
+  // the viewport (visually "out"). That's *not* the same progress value
+  // as where the lerp below settles at its end position (TEXTBOX_MOVE_END)
+  // — because travel distance scales with the box's own height while the
+  // viewport-crossing point doesn't, a fixed TEXTBOX_MOVE_END makes the
+  // box clear the viewport at a slightly different progress every time
+  // the box's height changes, which needed re-tuning by hand each time
+  // (0.9 settle -> exit at 0.83 last time, not the intended 0.9).
+  // TEXTBOX_MOVE_END is now solved for algebraically instead, from the
+  // known start/end centers and the box's real height, so
+  // TEXTBOX_EXIT_PROGRESS stays exact regardless of how tall the box is.
+  const TEXTBOX_EXIT_PROGRESS = 0.93;
   const TEXTBOX_START_TOP_EDGE_PX = 170;
   const TEXTBOX_EXIT_BUFFER_PX = 200;
   const textBoxStartCenterPx = TEXTBOX_START_TOP_EDGE_PX + textBoxHeight / 2;
   const textBoxEndCenterPx = -(textBoxHeight + TEXTBOX_EXIT_BUFFER_PX) + textBoxHeight / 2;
+  // fraction of the start->end journey covered at the instant the box's
+  // bottom edge reaches y=0, solved from center = bottom_edge - height/2
+  // = -height/2 at that instant.
+  const textboxExitFraction =
+    (textBoxHeight + TEXTBOX_START_TOP_EDGE_PX) /
+    (textBoxHeight + TEXTBOX_EXIT_BUFFER_PX + TEXTBOX_START_TOP_EDGE_PX);
+  const TEXTBOX_MOVE_END = TEXTBOX_EXIT_PROGRESS / textboxExitFraction;
   const textboxTopPx = lerp(
     textBoxStartCenterPx,
     textBoxEndCenterPx,
