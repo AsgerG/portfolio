@@ -202,12 +202,14 @@ type Point = { x: number; y: number };
 // black, white, blue
 const circleColors = ['#121212', '#FFFFFF', '#0284C7'];
 
-// row layout while the circles are appearing, left to right:
-// blue, black, white, then the logo — all with the same edge-to-edge gap.
+// row layout while the circles are appearing, left to right: blue,
+// black, white — same relative spacing as before, shifted so the
+// group's own horizontal midpoint (116 -> 230) lands centered directly
+// above the logo (which sits at the canvas's center, x=230).
 const startPositions: Point[] = [
-  { x: 116, y: 120 },
-  { x: 164, y: 120 },
-  { x: 68, y: 120 },
+  { x: 230, y: 120 },
+  { x: 278, y: 120 },
+  { x: 182, y: 120 },
 ];
 
 const ROW_Y = 90;
@@ -1395,8 +1397,8 @@ function CaseStudy() {
               style={{
                 left: 230,
                 top: 280,
-                width: 300,
-                height: 300 * (400 / 660),
+                width: 400,
+                height: 400 * (400 / 660),
                 transform: 'translate(-50%, -50%)',
                 opacity: svgOpacity,
               }}
