@@ -18,6 +18,8 @@ import brandValues from '../assets/easysbc/brand_values.png';
 import fc25Pack from '../assets/easysbc/fc25_pack.png';
 import fc26Pack from '../assets/easysbc/fc26_pack.png';
 import genericPack from '../assets/easysbc/generic_pack.png';
+import lateNights from '../assets/easysbc/lateNights.png';
+import workshops from '../assets/easysbc/Workshops.png';
 
 // drives smooth/eased scrolling site-wide. Lenis animates the native scroll
 // position itself (window.scrollTo under the hood), so it still dispatches
@@ -944,8 +946,13 @@ const caseStudySections: { heading: string; blocks: CaseStudyBlock[] }[] = [
         type: 'paragraph',
         text: 'Alongside them, early prototypes went straight back to the community: workshops and user testing sessions shaped the flows just as much as any internal review, keeping the product honest to the people actually grinding it every day.',
       },
-      { type: 'image', caption: 'Late nights' },
-      { type: 'image', caption: 'Workshops and user testing' },
+      {
+        type: 'imageRow',
+        images: [
+          { src: lateNights, alt: 'Late night working session', caption: 'Late nights' },
+          { src: workshops, alt: 'Workshop and user testing session', caption: 'Workshops and user testing' },
+        ],
+      },
     ],
   },
 ];
