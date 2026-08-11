@@ -13,6 +13,8 @@ import squadBuilder from '../assets/easysbc/designExamples/squad_builder.png';
 import metaRatingExplainer from '../assets/easysbc/designExamples/meta_rating_explainer.png';
 import squadTactics from '../assets/easysbc/designExamples/squad_tactics.png';
 import easysbcLogo from '../assets/easysbc/easysbc_logo.png';
+import brandSlogan from '../assets/easysbc/brand_slogan.png';
+import brandValues from '../assets/easysbc/brand_values.png';
 
 // drives smooth/eased scrolling site-wide. Lenis animates the native scroll
 // position itself (window.scrollTo under the hood), so it still dispatches
@@ -846,13 +848,15 @@ const ROW4_LABEL_Y = ROW4_Y - LABEL_OFFSET;
 const ROW5_LABEL_Y = ROW5_Y - LABEL_OFFSET;
 const rowLabels = ['background', 'text', 'button', 'chip', 'tag'];
 
-// case-study copy — grouped into named sections, each a mix of paragraphs
-// and image placeholders (real assets pending — see each placeholder's
-// caption for what it's standing in for), rendered together as one block
-// in order rather than synced to individual animation sections.
+// case-study copy — grouped into named sections, each a mix of
+// paragraphs, real images, and placeholders for assets still pending
+// (see each placeholder's caption for what it's standing in for),
+// rendered together as one block in order rather than synced to
+// individual animation sections.
 type CaseStudyBlock =
   | { type: 'paragraph'; text: string }
-  | { type: 'image'; caption: string };
+  | { type: 'image'; caption: string }
+  | { type: 'imagePair'; images: { src: string; alt: string; caption: string }[] };
 
 const caseStudySections: { heading: string; blocks: CaseStudyBlock[] }[] = [
   {
@@ -870,7 +874,13 @@ const caseStudySections: { heading: string; blocks: CaseStudyBlock[] }[] = [
         type: 'paragraph',
         text: "We wanted to build more than a set of tools — a place where players could share what they'd found, compare notes, and hold onto some agency over how they played the game.",
       },
-      { type: 'image', caption: 'Our brand — brand colours and feel' },
+      {
+        type: 'imagePair',
+        images: [
+          { src: brandSlogan, alt: 'EasySBC brand slogan', caption: 'Brand slogan' },
+          { src: brandValues, alt: 'EasySBC brand values', caption: 'Brand values' },
+        ],
+      },
       {
         type: 'paragraph',
         text: "EasySBC's product itself was technically dense, and the interface needed to hold up under that weight without ever feeling cheap or out of step with the calculations running underneath it. The interface also had to handle dense data tables and colorful EA artwork without turning cluttered, so I built around a dark blue-grey base that let those colors do the talking.",
@@ -2823,18 +2833,37 @@ function CaseStudy() {
                 <div key={section.heading}>
                   <h3 className="text-base font-semibold mb-3">{section.heading}</h3>
                   <div className="space-y-4 text-sm text-white/70 leading-relaxed">
-                    {section.blocks.map((block, i) =>
-                      block.type === 'paragraph' ? (
-                        <p key={i}>{block.text}</p>
-                      ) : (
+                    {section.blocks.map((block, i) => {
+                      if (block.type === 'paragraph') {
+                        return <p key={i}>{block.text}</p>;
+                      }
+                      if (block.type === 'imagePair') {
+                        return (
+                          <div key={i} className="flex gap-4 not-prose">
+                            {block.images.map((img) => (
+                              <figure key={img.src} className="w-1/2">
+                                <img
+                                  src={img.src}
+                                  alt={img.alt}
+                                  className="w-full rounded-lg border border-white/10"
+                                />
+                                <figcaption className="mt-1.5 text-xs text-white/40">
+                                  {img.caption}
+                                </figcaption>
+                              </figure>
+                            ))}
+                          </div>
+                        );
+                      }
+                      return (
                         <div
                           key={i}
                           className="rounded-lg border border-dashed border-white/15 bg-white/[0.03] flex items-center justify-center text-center px-4 py-10 text-xs text-white/40"
                         >
                           Image placeholder — {block.caption}
                         </div>
-                      ),
-                    )}
+                      );
+                    })}
                   </div>
                 </div>
               ))}
