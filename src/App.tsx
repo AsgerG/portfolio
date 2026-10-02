@@ -3,6 +3,7 @@ import Home from './pages/Home';
 import CaseStudy from './pages/CaseStudy';
 import Playground from './pages/Playground';
 import FruitSorting from './pages/FruitSorting';
+import UnderDevelopment from './pages/UnderDevelopment';
 
 // tiny hash-based router — no dependency needed for two pages, and hash
 // routes work on any static host without server-side rewrite config
@@ -27,6 +28,9 @@ function App() {
   if (route === 'easysbc') return <CaseStudy />;
   if (route === 'playground') return <Playground />;
   if (route === 'fruit-sorting') return <FruitSorting />;
+  // placeholder for projects that aren't published yet, e.g. #coming-soon/ai-talks
+  if (route === 'coming-soon' || route.startsWith('coming-soon/'))
+    return <UnderDevelopment slug={route.split('/')[1]} />;
   return <Home />;
 }
 

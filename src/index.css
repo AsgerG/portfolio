@@ -4,6 +4,18 @@
   color-scheme: dark;
 }
 
+/* ---- secondary (accent) colour --------------------------------------------
+   The one secondary colour used across the site: var(--accent).
+   Saturation and lightness come from the original #85b3e8. The hue
+   (--accent-hue) is swept 0 → 359 once a minute by src/accentCycle.ts —
+   done from JS rather than a CSS @keyframes animation because some browsers
+   didn't repaint text inside links or the inline SVG icons when an animated
+   custom property changed, which left those stuck on one colour. */
+:root {
+  --accent-hue: 212;
+  --accent: hsl(var(--accent-hue) 68% 72%);
+}
+
 html {
   /* prevents horizontal scroll at the document level. Doing this on a
      nested div instead (as FruitSorting.tsx used to) makes that div its

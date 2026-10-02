@@ -1,4 +1,5 @@
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
+import FruitSortingMobile from './FruitSortingMobile';
 import apple1 from '../assets/Fruit/apple_1.svg';
 import apple2 from '../assets/Fruit/apple_2.svg';
 import apple3 from '../assets/Fruit/apple_3.svg';
@@ -599,7 +600,7 @@ function lerp(a: number, b: number, t: number) {
   return a + (b - a) * t;
 }
 
-function FruitSorting() {
+function FruitSortingDesktop() {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [startTop, setStartTop] = useState(-1400);
   // box's rendered width, used to anchor the side-traveling fruit's path
@@ -1275,6 +1276,25 @@ function FruitSorting() {
       </div>
     </div>
   );
+}
+
+// below this width the desktop layout (whose belts reach ~300px past the
+// text box on both sides) doesn't fit, so phones get their own layout
+const MOBILE_QUERY = '(max-width: 767px)';
+
+function subscribeToMobile(onChange: () => void) {
+  const mq = window.matchMedia(MOBILE_QUERY);
+  mq.addEventListener('change', onChange);
+  return () => mq.removeEventListener('change', onChange);
+}
+
+function FruitSorting() {
+  const isMobile = useSyncExternalStore(
+    subscribeToMobile,
+    () => window.matchMedia(MOBILE_QUERY).matches,
+    () => false,
+  );
+  return isMobile ? <FruitSortingMobile /> : <FruitSortingDesktop />;
 }
 
 export default FruitSorting;

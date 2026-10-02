@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import Lenis from 'lenis';
 import sbcHomePage from '../assets/easysbc/designExamples/sbc_home_page.png';
 import sbcSetPage from '../assets/easysbc/designExamples/sbc_set_page.png';
@@ -19,6 +19,30 @@ import fc25Pack from '../assets/easysbc/fc25_pack.png';
 import fc26Pack from '../assets/easysbc/fc26_pack.png';
 import genericPack from '../assets/easysbc/generic_pack.png';
 import logoWithText from '../assets/easysbc/logo_with_text_2.svg';
+
+// phones get just the scroll animation, without the text box. Same 767px
+// breakpoint as the Fruit Sorting page's mobile/desktop switch.
+const MOBILE_QUERY = '(max-width: 767px)';
+function subscribeToMobile(onChange: () => void) {
+  const mq = window.matchMedia(MOBILE_QUERY);
+  mq.addEventListener('change', onChange);
+  return () => mq.removeEventListener('change', onChange);
+}
+function useIsMobile() {
+  return useSyncExternalStore(subscribeToMobile, () => window.matchMedia(MOBILE_QUERY).matches, () => false);
+}
+
+// the animation canvas is a fixed 460x560 stage; on a phone it's scaled
+// down to fit the screen width with a 16px gutter on each side
+const STAGE_WIDTH = 460;
+function subscribeToResize(onChange: () => void) {
+  window.addEventListener('resize', onChange);
+  return () => window.removeEventListener('resize', onChange);
+}
+function useStageScale(isMobile: boolean) {
+  const width = useSyncExternalStore(subscribeToResize, () => window.innerWidth, () => 1024);
+  return isMobile ? Math.min(1, (width - 32) / STAGE_WIDTH) : 1;
+}
 
 // drives smooth/eased scrolling site-wide. Lenis animates the native scroll
 // position itself (window.scrollTo under the hood), so it still dispatches
@@ -960,6 +984,8 @@ const caseStudySections: { heading: string; blocks: CaseStudyBlock[] }[] = [
 
 function CaseStudy() {
   useLenis();
+  const isMobile = useIsMobile();
+  const stageScale = useStageScale(isMobile);
   const { ref, progress } = useScrollProgress<HTMLDivElement>();
 
   // real rendered height of the text box, measured directly (rather than
@@ -1322,7 +1348,24 @@ function CaseStudy() {
   const rowCenterOffset = (rowIndex: number) =>
     ROW_HEIGHT * (rowIndex - 1) + IMAGE_HEIGHT / 2 - CANVAS_CENTER_Y;
   const scrollT = clamp01((outroT - VLINE_END) / (ROW6_LINES_END - VLINE_END));
-  const cameraOffsetY = lerp(0, rowCenterOffset(6), scrollT);
+  // mobile: the twelve screenshots sit in one vertical line instead of
+  // the two-column grid. They get their own evenly-spaced timeline across
+  // the same overview section (12 reveals + 11 connector lines, same 2:1
+  // reveal:line ratio as desktop), and the camera pans at one constant
+  // speed so each screenshot lands near the middle of the screen as it
+  // finishes fading in.
+  const MOBILE_SHOT_COUNT = 12;
+  const MOBILE_R = OVERVIEW_WIDTH / (MOBILE_SHOT_COUNT + (MOBILE_SHOT_COUNT - 1) / 2);
+  const MOBILE_L = MOBILE_R / 2;
+  const MOBILE_STEP = MOBILE_R + MOBILE_L;
+  const mobileShotStart = (k: number) => OVERVIEW_START + k * MOBILE_STEP;
+  const mobileRevealT = (k: number) => clamp01((outroT - mobileShotStart(k)) / MOBILE_R);
+  const mobileLineT = (k: number) => clamp01((outroT - (mobileShotStart(k) - MOBILE_L)) / MOBILE_L); // line into shot k
+  const mobileCameraRow = Math.min(
+    MOBILE_SHOT_COUNT - 1,
+    Math.max(0, (outroT - (OVERVIEW_START + MOBILE_R)) / MOBILE_STEP),
+  );
+  const cameraOffsetY = isMobile ? mobileCameraRow * ROW_HEIGHT : lerp(0, rowCenterOffset(6), scrollT);
   // outgoing content rises the same distance (520px) over the same baseT
   // range as the base SVG above (both driven by baseT, not raw outroT),
   // so the two stay synced/matched-rate through the whole exit
@@ -1372,16 +1415,38 @@ function CaseStudy() {
             : 'Part 5: Overview';
 
   return (
-    <div className="bg-[#15181D]">
+    <div className="bg-[#15181D] overflow-x-clip">
       {/* live scroll-progress readout, fixed to the viewport, for lining
           up which stage of the timeline we're talking about while polishing */}
-      <div className="fixed top-4 left-4 z-50 flex items-center gap-2 font-mono text-xs text-white/70 pointer-events-none">
-        <span className="bg-black/50 px-2 py-1 rounded">{progress.toFixed(3)}</span>
-        <span className="bg-black/50 px-2 py-1 rounded">{sectionName}</span>
-      </div>
-      <div ref={ref} className="grid grid-cols-2">
-        <div className="sticky top-0 h-screen flex items-center justify-center">
-          <div className="relative w-[460px] max-w-full h-[560px]">
+      {/* on mobile the Back link (normally in the text box, which is
+          hidden there) joins this bar: Back first, where the counter sits
+          on desktop, then the section name, with the counter on the right */}
+      {isMobile ? (
+        <div className="fixed top-4 inset-x-4 z-50 flex items-center gap-2 font-mono text-xs text-white/70 pointer-events-none">
+          <a
+            href="#"
+            className="pointer-events-auto rounded bg-black/50 px-2 py-1 font-sans text-sm hover:text-white transition-colors"
+          >
+            ← Back
+          </a>
+          <span className="bg-black/50 px-2 py-1 rounded">{sectionName}</span>
+          <span className="ml-auto bg-black/50 px-2 py-1 rounded">{progress.toFixed(3)}</span>
+        </div>
+      ) : (
+        <div className="fixed top-4 left-4 z-50 flex items-center gap-2 font-mono text-xs text-white/70 pointer-events-none">
+          <span className="bg-black/50 px-2 py-1 rounded">{progress.toFixed(3)}</span>
+          <span className="bg-black/50 px-2 py-1 rounded">{sectionName}</span>
+        </div>
+      )}
+      {/* mobile: one column, with the sticky canvas and the tall spacer
+          stacked in the same grid cell so the page keeps the exact same
+          scroll length (and so the same animation timing) as desktop */}
+      <div ref={ref} className="grid grid-cols-2 max-md:grid-cols-1">
+        <div className="sticky top-0 h-screen flex items-center justify-center max-md:[grid-area:1/1]">
+          <div
+            className="relative w-[460px] h-[560px] shrink-0"
+            style={stageScale !== 1 ? { transform: `scale(${stageScale})` } : undefined}
+          >
             <div
               style={{
                 position: 'relative',
@@ -2416,11 +2481,62 @@ function CaseStudy() {
                   width: 450,
                   height: 'auto',
                   zIndex: 2,
-                  opacity: homePageRevealT,
+                  opacity: isMobile ? mobileRevealT(0) : homePageRevealT,
                   filter: 'drop-shadow(0px 4px 8px rgba(0, 0, 0, 0.3))',
                 }}
               />
 
+              {isMobile ? (
+                // mobile: one vertical line of screenshots under the home
+                // page, each joined to the one above by a short vertical
+                // connector line that grows before the next one fades in
+                [
+                  sbcSetPage,
+                  solutionView,
+                  myClub,
+                  players,
+                  detailedPlayerView,
+                  evolutions,
+                  evolutionBuilder,
+                  tactics,
+                  squadBuilder,
+                  squadTactics,
+                  metaRatingExplainer,
+                ].map((src, idx) => {
+                  const k = idx + 1;
+                  return (
+                    <Fragment key={src}>
+                      <div
+                        style={{
+                          position: 'absolute',
+                          top: ROW_HEIGHT * (k - 1) + IMAGE_HEIGHT,
+                          left: 224,
+                          width: 2,
+                          height: lerp(0, IMAGE_GAP, mobileLineT(k)),
+                          backgroundColor: 'rgba(255, 255, 255, 0.6)',
+                          zIndex: 2,
+                        }}
+                      />
+                      <img
+                        src={src}
+                        alt=""
+                        width={450}
+                        style={{
+                          position: 'absolute',
+                          top: ROW_HEIGHT * k,
+                          left: 0,
+                          width: 450,
+                          height: 'auto',
+                          zIndex: 2,
+                          opacity: mobileRevealT(k),
+                          filter: 'drop-shadow(0px 4px 8px rgba(0, 0, 0, 0.3))',
+                        }}
+                      />
+                    </Fragment>
+                  );
+                })
+              ) : (
+              <>
               {/* connector line — grows from sbc_home_page's right edge
                   (x=450) across the 50px gap toward sbc_set_page's left
                   edge, vertically centered on the images (~154, half of
@@ -2834,6 +2950,8 @@ function CaseStudy() {
                   filter: 'drop-shadow(0px 4px 8px rgba(0, 0, 0, 0.3))',
                 }}
               />
+              </>
+              )}
               </div>
             </div>
 
@@ -2851,7 +2969,7 @@ function CaseStudy() {
             the left. These spacer divs exist purely to give the ref
             container the ~544vh of total height the sticky canvas needs
             to play out its full timeline. */}
-        <div className="flex flex-col max-w-md" aria-hidden>
+        <div className="flex flex-col max-w-md max-md:[grid-area:1/1]" aria-hidden>
           <div style={{ height: '544vh' }} />
         </div>
       </div>
@@ -2862,6 +2980,7 @@ function CaseStudy() {
           (progress TEXTBOX_MOVE_END, then held there). Same horizontal
           placement as before (right half of the screen, box itself
           shifted 200px further left via marginLeft). */}
+      {!isMobile && (
       <div
         className="fixed pointer-events-none"
         style={{ left: '50%', width: '50%', top: 0, height: '100vh', zIndex: 15 }}
@@ -2995,6 +3114,7 @@ function CaseStudy() {
           </div>
         </div>
       </div>
+      )}
     </div>
   );
 }
