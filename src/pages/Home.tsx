@@ -127,7 +127,7 @@ function Welcome() {
         <p className="sm:hidden font-bold">Welcome! 🧜🏼‍♂️</p>
         <p>I'm Asger – a Danish guy working in tech and based in the Bay Area.</p>
         <p className="mt-8 sm:mt-0">
-          I co-founded a million-dollar business. Taught a LEGO robot to sort rotten fruit. Survived big pharma.
+          I've co-founded a million-dollar business. Taught a LEGO robot to sort rotten fruit. Survived big pharma.
           Currently self-employed.
         </p>
         <p>Browse my content and connect! I'm always open for a chat ✨</p>
